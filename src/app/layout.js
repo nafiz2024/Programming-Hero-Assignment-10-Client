@@ -1,5 +1,7 @@
 import "../styles/globals.css";
 
+import { AuthProvider } from "@/providers/AuthProvider";
+
 export const metadata = {
   title: "PromptFlow",
   description: "PromptFlow frontend client",
@@ -8,7 +10,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

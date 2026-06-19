@@ -95,6 +95,12 @@ export const authApi = {
     });
   },
 
+  signOut() {
+    return apiRequest("/api/auth/sign-out", {
+      method: "POST",
+    });
+  },
+
   getSession() {
     return apiRequest("/api/users/me");
   },
