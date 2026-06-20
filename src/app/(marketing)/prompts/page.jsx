@@ -1,14 +1,10 @@
+import MarketplaceClient from "@/components/marketplace/MarketplaceClient";
 import PageContainer from "@/components/shared/PageContainer";
-import SectionHeader from "@/components/shared/SectionHeader";
 
 export default function PromptsPage() {
   return (
-    <PageContainer as="section" className="py-16" size="xl">
-      <SectionHeader
-        description="All Prompts page content is not implemented yet. This placeholder exists so the navigation shell resolves cleanly."
-        eyebrow="Placeholder"
-        title="All Prompts"
-      />
+    <PageContainer as="section" className="pb-16 pt-10 md:pb-20 md:pt-12" size="xl">
+      <MarketplaceClient />
     </PageContainer>
   );
 }
