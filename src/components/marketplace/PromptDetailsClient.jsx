@@ -1,0 +1,972 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Bookmark,
+  Bot,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Clock3,
+  Copy,
+  Eye,
+  Expand,
+  Flag,
+  Gauge,
+  Loader2,
+  Lock,
+  Share2,
+  Sparkles,
+  Star,
+  UserPlus,
+} from "lucide-react";
+import clsx from "clsx";
+
+import MotionReveal from "@/components/shared/MotionReveal";
+import { MotionStagger, MotionStaggerItem } from "@/components/shared/MotionStagger";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import ErrorState from "@/components/ui/ErrorState";
+import PromptDetailsSkeleton from "@/components/marketplace/PromptDetailsSkeleton";
+import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
+import SelectField from "@/components/ui/SelectField";
+import { useAuth } from "@/hooks/useAuth";
+import { bookmarkApi, promptApi, reportApi, reviewApi } from "@/lib/api";
+import { formatCompactNumber } from "@/lib/marketplace";
+import {
+  normalizePromptDetails,
+  normalizeReviewsPayload,
+  premiumBenefits,
+  promptUsageSteps,
+  reportReasonOptions,
+} from "@/lib/prompt-details";
+import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
+
+function formatDate(value, options = { month: "short", day: "numeric", year: "numeric" }) {
+  if (!value) {
+    return "Not available";
+  }
+
+  try {
+    return new Intl.DateTimeFormat("en-US", options).format(new Date(value));
+  } catch {
+    return "Not available";
+  }
+}
+
+function getBookmarkIds(payload) {
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.bookmarks)
+    ? payload.bookmarks
+    : Array.isArray(payload?.data)
+    ? payload.data
+    : [];
+
+  return new Set(
+    items
+      .map((item) => item?.prompt?._id || item?.promptId || item?._id || item?.id)
+      .filter(Boolean),
+  );
+}
+
+function MetaStat({ icon: Icon, label, value }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-pill border border-white/10 bg-white/[0.05] px-3 py-2 text-body-sm text-muted">
+      <Icon className="h-4 w-4 text-primary" />
+      <span>{value}</span>
+      <span className="text-muted/70">{label}</span>
+    </div>
+  );
+}
+
+function DetailRow({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-white/8 py-3 last:border-b-0 last:pb-0 first:pt-0">
+      <div className="inline-flex items-center gap-2 text-body-sm text-muted">
+        <Icon className="mt-0.5 h-4 w-4 text-primary" />
+        <span>{label}</span>
+      </div>
+      <span className="max-w-[60%] text-right text-body-sm font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function RatingStars({ rating = 0, size = "sm" }) {
+  const rounded = Math.round(rating);
+  const sizeClass = size === "lg" ? "h-5 w-5" : "h-4 w-4";
+
+  return (
+    <div className="flex items-center gap-1 text-warning">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Star
+          key={`star-${index}`}
+          className={clsx(sizeClass, index < rounded ? "fill-current" : "text-white/15")}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RatingBar({ count, star, totalReviews }) {
+  const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
+
+  return (
+    <div className="grid grid-cols-[52px_minmax(0,1fr)_64px] items-center gap-3 text-body-sm text-muted">
+      <span>{star} star</span>
+      <div className="h-2 rounded-full bg-white/[0.06]">
+        <div
+          className="h-full rounded-full bg-brand-gradient"
+          style={{ width: `${Math.max(percentage, count > 0 ? 6 : 0)}%` }}
+        />
+      </div>
+      <span className="text-right">{count}</span>
+    </div>
+  );
+}
+
+function ReviewCard({ review }) {
+  return (
+    <article className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-gradient text-body-sm font-semibold text-white shadow-glow">
+            {review.initials}
+          </div>
+          <div className="space-y-1">
+            <p className="text-body font-medium text-foreground">{review.authorName}</p>
+            <p className="text-body-xs text-muted">{formatDate(review.createdAt)}</p>
+          </div>
+        </div>
+        <div className="space-y-2 text-right">
+          <RatingStars rating={review.rating} />
+          <p className="text-body-xs text-muted">{review.rating.toFixed(1)} / 5</p>
+        </div>
+      </div>
+      <p className="text-body-sm leading-7 text-muted">{review.comment}</p>
+    </article>
+  );
+}
+
+function UsageCard({ index, title, description }) {
+  return (
+    <div className="pf-card rounded-xl p-4">
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradient text-body-sm font-semibold text-white shadow-glow">
+        {index}
+      </div>
+      <h3 className="text-body font-semibold text-foreground">{title}</h3>
+      <p className="mt-2 text-body-sm text-muted">{description}</p>
+    </div>
+  );
+}
+
+export default function PromptDetailsClient({ promptId }) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [promptState, setPromptState] = useState({
+    status: "loading",
+    item: null,
+    error: "",
+  });
+  const [reviewState, setReviewState] = useState({
+    status: "loading",
+    items: [],
+    averageRating: 0,
+    totalReviews: 0,
+    distribution: [],
+    error: "",
+  });
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isBookmarkReady, setIsBookmarkReady] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [actionState, setActionState] = useState({
+    copy: false,
+    bookmark: false,
+    review: false,
+    report: false,
+  });
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    comment: "",
+  });
+  const [reportForm, setReportForm] = useState({
+    reason: reportReasonOptions[0],
+    description: "",
+  });
+
+  async function loadPrompt() {
+    setPromptState((currentState) => ({
+      ...currentState,
+      status: "loading",
+      error: "",
+    }));
+
+    try {
+      const response = await promptApi.getById(promptId);
+
+      setPromptState({
+        status: "success",
+        item: normalizePromptDetails(response),
+        error: "",
+      });
+    } catch (error) {
+      setPromptState({
+        status: "error",
+        item: null,
+        error: error.message || "Unable to load prompt details.",
+      });
+    }
+  }
+
+  async function loadReviews() {
+    setReviewState((currentState) => ({
+      ...currentState,
+      status: currentState.items.length > 0 ? "success" : "loading",
+      error: "",
+    }));
+
+    try {
+      const response = await reviewApi.getByPrompt(promptId);
+      const normalized = normalizeReviewsPayload(response);
+
+      setReviewState({
+        status: "success",
+        ...normalized,
+        error: "",
+      });
+    } catch (error) {
+      setReviewState({
+        status: "error",
+        items: [],
+        averageRating: 0,
+        totalReviews: 0,
+        distribution: [],
+        error: error.message || "Unable to load prompt reviews.",
+      });
+    }
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPageData() {
+      const [promptResult, reviewResult] = await Promise.allSettled([
+        promptApi.getById(promptId),
+        reviewApi.getByPrompt(promptId),
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (promptResult.status === "fulfilled") {
+        setPromptState({
+          status: "success",
+          item: normalizePromptDetails(promptResult.value),
+          error: "",
+        });
+      } else {
+        setPromptState({
+          status: "error",
+          item: null,
+          error: promptResult.reason?.message || "Unable to load prompt details.",
+        });
+      }
+
+      if (reviewResult.status === "fulfilled") {
+        setReviewState({
+          status: "success",
+          ...normalizeReviewsPayload(reviewResult.value),
+          error: "",
+        });
+      } else {
+        setReviewState({
+          status: "error",
+          items: [],
+          averageRating: 0,
+          totalReviews: 0,
+          distribution: [5, 4, 3, 2, 1].map((star) => ({ star, count: 0 })),
+          error: reviewResult.reason?.message || "Unable to load prompt reviews.",
+        });
+      }
+    }
+
+    loadPageData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [promptId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadBookmarks() {
+      if (authLoading) {
+        return;
+      }
+
+      if (!isAuthenticated) {
+        if (isMounted) {
+          setIsBookmarked(false);
+          setIsBookmarkReady(true);
+        }
+        return;
+      }
+
+      try {
+        const response = await bookmarkApi.getAll();
+        const bookmarkIds = getBookmarkIds(response);
+
+        if (isMounted) {
+          setIsBookmarked(bookmarkIds.has(promptId));
+          setIsBookmarkReady(true);
+        }
+      } catch {
+        if (isMounted) {
+          setIsBookmarked(false);
+          setIsBookmarkReady(true);
+        }
+      }
+    }
+
+    loadBookmarks();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authLoading, isAuthenticated, promptId]);
+
+  const prompt = promptState.item;
+  const reviewSummary = useMemo(
+    () => ({
+      averageRating:
+        reviewState.totalReviews > 0 ? reviewState.averageRating : prompt?.rating || 0,
+      totalReviews:
+        reviewState.totalReviews > 0 ? reviewState.totalReviews : prompt?.reviewCount || 0,
+      distribution: reviewState.distribution,
+    }),
+    [prompt?.rating, prompt?.reviewCount, reviewState],
+  );
+
+  async function handleCopy() {
+    if (!prompt || prompt.locked) {
+      toastWarning("Upgrade to unlock this premium prompt.");
+      return;
+    }
+
+    if (!navigator?.clipboard?.writeText) {
+      toastError("Clipboard access is not available in this browser.");
+      return;
+    }
+
+    setActionState((currentState) => ({ ...currentState, copy: true }));
+
+    try {
+      await navigator.clipboard.writeText(prompt.content);
+      await promptApi.copy(prompt.id);
+
+      setPromptState((currentState) => ({
+        ...currentState,
+        item: currentState.item
+          ? {
+              ...currentState.item,
+              copyCount: currentState.item.copyCount + 1,
+            }
+          : currentState.item,
+      }));
+      toastSuccess("Prompt copied successfully");
+    } catch (error) {
+      toastError(error.message || "Unable to copy this prompt right now.");
+    } finally {
+      setActionState((currentState) => ({ ...currentState, copy: false }));
+    }
+  }
+
+  async function handleBookmarkToggle() {
+    if (!prompt) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toastWarning("Please log in to bookmark prompts.");
+      return;
+    }
+
+    setActionState((currentState) => ({ ...currentState, bookmark: true }));
+
+    try {
+      await bookmarkApi.toggle(prompt.id, isBookmarked);
+      setIsBookmarked((currentValue) => !currentValue);
+      toastSuccess(isBookmarked ? "Bookmark removed" : "Prompt bookmarked");
+    } catch (error) {
+      toastError(error.message || "Unable to update your bookmark.");
+    } finally {
+      setActionState((currentState) => ({ ...currentState, bookmark: false }));
+    }
+  }
+
+  async function handleShare() {
+    if (!prompt) {
+      return;
+    }
+
+    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+
+    try {
+      if (navigator?.share) {
+        await navigator.share({
+          title: prompt.title,
+          text: prompt.description,
+          url: shareUrl,
+        });
+      } else if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+
+      toastSuccess("Prompt link ready to share");
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        toastError("Unable to share this prompt right now.");
+      }
+    }
+  }
+
+  async function handleReviewSubmit(event) {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      toastWarning("Please log in to submit a review.");
+      return;
+    }
+
+    if (!reviewForm.rating) {
+      toastWarning("Please choose a rating before submitting.");
+      return;
+    }
+
+    setActionState((currentState) => ({ ...currentState, review: true }));
+
+    try {
+      await reviewApi.createOrUpdate(promptId, {
+        rating: Number(reviewForm.rating),
+        comment: reviewForm.comment.trim(),
+      });
+      await loadReviews();
+      setReviewForm({
+        rating: Number(reviewForm.rating),
+        comment: "",
+      });
+      toastSuccess("Review submitted");
+    } catch (error) {
+      toastError(error.message || "Unable to submit your review.");
+    } finally {
+      setActionState((currentState) => ({ ...currentState, review: false }));
+    }
+  }
+
+  async function handleReportSubmit(event) {
+    event.preventDefault();
+
+    if (!isAuthenticated) {
+      toastWarning("Please log in to report this prompt.");
+      return;
+    }
+
+    setActionState((currentState) => ({ ...currentState, report: true }));
+
+    try {
+      await reportApi.create(promptId, {
+        reason: reportForm.reason,
+        description: reportForm.description.trim(),
+      });
+      setReportForm({
+        reason: reportReasonOptions[0],
+        description: "",
+      });
+      setIsReportOpen(false);
+      toastSuccess("Report submitted");
+    } catch (error) {
+      toastError(error.message || "Unable to submit your report.");
+    } finally {
+      setActionState((currentState) => ({ ...currentState, report: false }));
+    }
+  }
+
+  if (promptState.status === "loading") {
+    return <PromptDetailsSkeleton />;
+  }
+
+  if (promptState.status === "error" || !prompt) {
+    return (
+      <ErrorState
+        description={promptState.error || "Unable to load prompt details."}
+        onRetry={loadPrompt}
+        title="Unable to load prompt details"
+      />
+    );
+  }
+
+  return (
+    <>
+      <div className="space-y-6 md:space-y-8">
+        <MotionReveal preset="contentFade">
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2 text-body-xs text-muted">
+              <Link className="text-primary transition hover:text-secondary" href="/">
+                Home
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <Link className="text-primary transition hover:text-secondary" href="/prompts">
+                All Prompts
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span>{prompt.category}</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span className="text-foreground">{prompt.title}</span>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <h1 className="max-w-4xl text-display-sm md:text-display-md">{prompt.title}</h1>
+                <p className="max-w-3xl text-body md:text-lg">{prompt.description}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Badge color="primary" icon={Bot}>
+                  {prompt.aiTool}
+                </Badge>
+                <Badge
+                  color={prompt.difficulty === "Advanced" ? "danger" : prompt.difficulty === "Intermediate" ? "warning" : "success"}
+                  icon={Gauge}
+                >
+                  {prompt.difficulty}
+                </Badge>
+                <Badge color={prompt.visibility === "Premium" ? "primary" : "success"} icon={Eye}>
+                  {prompt.visibility}
+                </Badge>
+                <Badge color="default" icon={Sparkles}>
+                  {prompt.category}
+                </Badge>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <MetaStat
+                  icon={Star}
+                  label={`(${reviewSummary.totalReviews} reviews)`}
+                  value={reviewSummary.averageRating > 0 ? reviewSummary.averageRating.toFixed(1) : "New"}
+                />
+                <MetaStat icon={Copy} label="copies" value={formatCompactNumber(prompt.copyCount)} />
+                <MetaStat icon={CalendarDays} label="published" value={formatDate(prompt.publishedAt)} />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  isDisabled={prompt.locked}
+                  isLoading={actionState.copy}
+                  onPress={handleCopy}
+                  size="lg"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy Prompt
+                </Button>
+                <Button
+                  isDisabled={!isBookmarkReady}
+                  isLoading={actionState.bookmark}
+                  onPress={handleBookmarkToggle}
+                  size="lg"
+                  variant="secondary"
+                >
+                  <Bookmark className={clsx("h-4 w-4", isBookmarked ? "fill-current" : "")} />
+                  {isBookmarked ? "Bookmarked" : "Bookmark"}
+                </Button>
+                <Button onPress={handleShare} size="lg" variant="secondary">
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </Button>
+                <Button onPress={() => setIsReportOpen(true)} size="lg" variant="secondary">
+                  <Flag className="h-4 w-4" />
+                  Report
+                </Button>
+              </div>
+            </div>
+          </div>
+        </MotionReveal>
+
+        <div className="grid gap-6 desktop:grid-cols-[minmax(0,1.4fr)_360px]">
+          <div className="space-y-6">
+            <MotionReveal preset="viewportReveal">
+              <section className="pf-card rounded-xl p-5 md:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                      Prompt Content
+                    </p>
+                    <h2 className="mt-2 text-h2">Ready-to-use prompt structure</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      aria-label="Copy prompt"
+                      className="pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-muted transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={prompt.locked}
+                      onClick={handleCopy}
+                      type="button"
+                    >
+                      {actionState.copy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                    <button
+                      aria-label="Expand prompt"
+                      className="pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-muted transition hover:text-foreground"
+                      onClick={() => setIsExpanded((currentValue) => !currentValue)}
+                      type="button"
+                    >
+                      <Expand className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  className={clsx(
+                    "relative overflow-hidden rounded-xl border border-white/10 bg-[#091122] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+                    isExpanded ? "min-h-[560px]" : "min-h-[420px]",
+                  )}
+                >
+                  <div className="flex items-center gap-2 border-b border-white/8 px-4 py-3">
+                    <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+                    <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+                    <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+                    <span className="ml-3 text-body-xs uppercase tracking-[0.2em] text-muted">
+                      PromptFlow prompt
+                    </span>
+                  </div>
+                  <pre
+                    className={clsx(
+                      "overflow-x-auto whitespace-pre-wrap px-4 py-5 font-mono text-[13px] leading-7 text-slate-100 md:px-5 md:text-sm",
+                      prompt.locked ? "blur-md select-none" : "",
+                    )}
+                  >
+                    {prompt.content}
+                  </pre>
+
+                  {prompt.locked ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/60 p-6 backdrop-blur-md">
+                      <div className="max-w-md rounded-xl border border-primary/20 bg-background-alt/92 p-6 text-center shadow-glow">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/14 text-primary">
+                          <Lock className="h-6 w-6" />
+                        </div>
+                        <h3 className="mt-4 text-h3">Premium prompt locked</h3>
+                        <p className="mt-3 text-body-sm text-muted">
+                          Upgrade to reveal the full prompt content, copy access, and premium creator tools.
+                        </p>
+                        <Button className="mt-5" onPress={() => toastWarning("Premium upgrade flow will be connected in a later phase.")}>
+                          Unlock Premium
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            </MotionReveal>
+
+            <MotionStagger className="grid gap-4 md:grid-cols-2 desktop:grid-cols-4" preset="dashboardCardStagger">
+              {promptUsageSteps.map((step, index) => (
+                <MotionStaggerItem key={step.title}>
+                  <UsageCard
+                    description={step.description}
+                    index={index + 1}
+                    title={step.title}
+                  />
+                </MotionStaggerItem>
+              ))}
+            </MotionStagger>
+
+            <MotionReveal preset="viewportReveal">
+              <section className="pf-card rounded-xl p-5 md:p-6">
+                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient text-body font-semibold text-white shadow-glow">
+                      {prompt.creator.initials}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h2 className="text-h2">{prompt.creator.name}</h2>
+                        <Badge color="success" icon={Check}>
+                          Top Creator
+                        </Badge>
+                      </div>
+                      <p className="max-w-2xl text-body-sm text-muted">{prompt.creator.bio}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button as={Link} href="/creator" variant="secondary">
+                      View Profile
+                    </Button>
+                    <Button onPress={() => toastSuccess("Follow UI is ready for a future API integration.")} variant="secondary">
+                      <UserPlus className="h-4 w-4" />
+                      Follow
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+                    <p className="text-body-xs uppercase tracking-[0.18em] text-muted">Total Prompts</p>
+                    <p className="mt-3 text-h2">{formatCompactNumber(prompt.creator.totalPrompts)}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+                    <p className="text-body-xs uppercase tracking-[0.18em] text-muted">Total Copies</p>
+                    <p className="mt-3 text-h2">{formatCompactNumber(prompt.creator.totalCopies)}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+                    <p className="text-body-xs uppercase tracking-[0.18em] text-muted">Average Rating</p>
+                    <p className="mt-3 text-h2">{prompt.creator.averageRating.toFixed(1)}</p>
+                  </div>
+                </div>
+              </section>
+            </MotionReveal>
+
+            <MotionReveal preset="viewportReveal">
+              <section className="pf-card rounded-xl p-5 md:p-6">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">Reviews</p>
+                    <h2 className="mt-2 text-h2">Community feedback</h2>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-pill border border-white/10 bg-white/[0.04] px-4 py-2 text-body-sm text-muted">
+                    <Star className="h-4 w-4 fill-current text-warning" />
+                    <span>{reviewSummary.averageRating > 0 ? reviewSummary.averageRating.toFixed(1) : "No ratings yet"}</span>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+                  <div className="space-y-5">
+                    <div className="rounded-xl border border-white/8 bg-white/[0.03] p-5">
+                      <p className="text-display-sm">
+                        {reviewSummary.averageRating > 0 ? reviewSummary.averageRating.toFixed(1) : "0.0"}
+                      </p>
+                      <div className="mt-3">
+                        <RatingStars rating={reviewSummary.averageRating} size="lg" />
+                      </div>
+                      <p className="mt-3 text-body-sm text-muted">
+                        {reviewSummary.totalReviews > 0
+                          ? `${reviewSummary.totalReviews} total reviews`
+                          : "No reviews yet. Be the first to share feedback."}
+                      </p>
+
+                      <div className="mt-5 space-y-3">
+                        {reviewSummary.distribution.map((entry) => (
+                          <RatingBar
+                            key={entry.star}
+                            count={entry.count}
+                            star={entry.star}
+                            totalReviews={Math.max(reviewSummary.totalReviews, 1)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <form className="rounded-xl border border-white/8 bg-white/[0.03] p-5" onSubmit={handleReviewSubmit}>
+                      <div className="space-y-2">
+                        <h3 className="text-h3">Write a review</h3>
+                        <p className="text-body-sm text-muted">Share your experience to help other buyers.</p>
+                      </div>
+
+                      <div className="mt-4 flex gap-2">
+                        {Array.from({ length: 5 }).map((_, index) => {
+                          const value = index + 1;
+
+                          return (
+                            <button
+                              key={`review-star-${value}`}
+                              aria-label={`Rate ${value} stars`}
+                              className="pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-warning transition hover:border-primary/30"
+                              onClick={() => setReviewForm((currentState) => ({ ...currentState, rating: value }))}
+                              type="button"
+                            >
+                              <Star className={clsx("h-5 w-5", reviewForm.rating >= value ? "fill-current" : "")} />
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition focus-within:border-primary/50 focus-within:shadow-glow">
+                        <textarea
+                          className="min-h-[120px] w-full resize-none bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted"
+                          maxLength={500}
+                          onChange={(event) =>
+                            setReviewForm((currentState) => ({
+                              ...currentState,
+                              comment: event.target.value,
+                            }))
+                          }
+                          placeholder="Write your review here..."
+                          value={reviewForm.comment}
+                        />
+                        <div className="mt-3 text-right text-body-xs text-muted">
+                          {reviewForm.comment.length}/500
+                        </div>
+                      </div>
+
+                      <Button className="mt-5" isLoading={actionState.review} size="lg" type="submit">
+                        Submit Review
+                      </Button>
+                    </form>
+                  </div>
+
+                  <div className="space-y-4">
+                    {reviewState.status === "error" ? (
+                      <ErrorState
+                        description={reviewState.error || "Unable to load reviews."}
+                        onRetry={loadReviews}
+                        title="Unable to load reviews"
+                      />
+                    ) : null}
+
+                    {reviewState.status !== "error" && reviewState.items.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center">
+                        <h3 className="text-h3">No reviews yet</h3>
+                        <p className="mt-3 text-body-sm text-muted">
+                          This prompt is new to the marketplace. Your review can be the first signal for other users.
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {reviewState.items.map((review) => (
+                      <ReviewCard key={review.id} review={review} />
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </MotionReveal>
+          </div>
+
+          <div className="space-y-5">
+            <MotionReveal preset="viewportReveal">
+              <aside className="pf-card rounded-xl p-5">
+                <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">About the Creator</p>
+                <div className="mt-4 flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient text-body font-semibold text-white shadow-glow">
+                    {prompt.creator.initials}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-h3">{prompt.creator.name}</h2>
+                      <Badge color="success" icon={Check}>
+                        Top Creator
+                      </Badge>
+                    </div>
+                    <p className="text-body-sm text-muted">{prompt.creator.bio}</p>
+                  </div>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+                    <p className="text-body-xs uppercase tracking-[0.18em] text-muted">Prompts</p>
+                    <p className="mt-2 text-h3">{formatCompactNumber(prompt.creator.totalPrompts)}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+                    <p className="text-body-xs uppercase tracking-[0.18em] text-muted">Copies</p>
+                    <p className="mt-2 text-h3">{formatCompactNumber(prompt.creator.totalCopies)}</p>
+                  </div>
+                </div>
+                <Button as={Link} className="mt-5 w-full" href="/creator" variant="secondary">
+                  View Profile
+                </Button>
+              </aside>
+            </MotionReveal>
+
+            <MotionReveal preset="viewportReveal">
+              <aside className="pf-card rounded-xl p-5">
+                <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">Details</p>
+                <div className="mt-4">
+                  <DetailRow icon={Sparkles} label="Category" value={prompt.category} />
+                  <DetailRow icon={Bot} label="AI Tool" value={prompt.aiTool} />
+                  <DetailRow icon={Gauge} label="Difficulty" value={prompt.difficulty} />
+                  <DetailRow icon={Eye} label="Visibility" value={prompt.visibility} />
+                  <DetailRow icon={CalendarDays} label="Published" value={formatDate(prompt.publishedAt)} />
+                  <DetailRow icon={Clock3} label="Updated" value={formatDate(prompt.updatedAt)} />
+                </div>
+              </aside>
+            </MotionReveal>
+
+            <MotionReveal preset="viewportReveal">
+              <aside className="overflow-hidden rounded-xl border border-primary/20 bg-brand-gradient p-[1px] shadow-glow">
+                <div className="h-full rounded-[inherit] bg-background-alt/96 p-5">
+                  <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">Premium Access</p>
+                  <h2 className="mt-3 text-h2">Unlock premium prompts</h2>
+                  <p className="mt-3 text-body-sm text-muted">
+                    Get deeper prompt systems, faster workflows, and premium creator content as PromptFlow expands.
+                  </p>
+
+                  <div className="mt-5 space-y-3">
+                    {premiumBenefits.map((benefit) => (
+                      <div key={benefit} className="inline-flex w-full items-center gap-3 text-body-sm text-foreground">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/14 text-primary">
+                          <Check className="h-4 w-4" />
+                        </span>
+                        <span>{benefit}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    className="mt-6 w-full"
+                    onPress={() => toastWarning("Payment flow will be connected in a later phase.")}
+                    size="lg"
+                  >
+                    Upgrade Now
+                  </Button>
+                </div>
+              </aside>
+            </MotionReveal>
+          </div>
+        </div>
+      </div>
+
+      <ResponsiveDrawer isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} title="Report Prompt">
+        <form className="space-y-5" onSubmit={handleReportSubmit}>
+          <SelectField
+            label="Reason for reporting"
+            onChange={(event) =>
+              setReportForm((currentState) => ({
+                ...currentState,
+                reason: event.target.value,
+              }))
+            }
+            options={reportReasonOptions}
+            value={reportForm.reason}
+          />
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition focus-within:border-primary/50 focus-within:shadow-glow">
+            <label className="mb-3 block text-body-xs font-medium text-muted">Description (optional)</label>
+            <textarea
+              className="min-h-[160px] w-full resize-none bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted"
+              maxLength={300}
+              onChange={(event) =>
+                setReportForm((currentState) => ({
+                  ...currentState,
+                  description: event.target.value,
+                }))
+              }
+              placeholder="Provide more details about the issue..."
+              value={reportForm.description}
+            />
+            <div className="mt-3 text-right text-body-xs text-muted">
+              {reportForm.description.length}/300
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button onPress={() => setIsReportOpen(false)} type="button" variant="secondary">
+              Cancel
+            </Button>
+            <Button isLoading={actionState.report} type="submit" variant="danger">
+              Submit Report
+            </Button>
+          </div>
+        </form>
+      </ResponsiveDrawer>
+    </>
+  );
+}

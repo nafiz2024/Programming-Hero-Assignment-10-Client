@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Menu } from "lucide-react";
 
 import BottomNavigation from "@/components/layout/BottomNavigation";
@@ -37,14 +37,18 @@ export default function DashboardShell({ children }) {
 
         <div className="grid gap-6 desktop:grid-cols-[280px_minmax(0,1fr)]">
           <div className="hidden desktop:sticky desktop:top-24 desktop:block desktop:self-start">
-            <DashboardSidebar />
+            <Suspense fallback={<div className="pf-card h-[480px] rounded-lg" />}>
+              <DashboardSidebar />
+            </Suspense>
           </div>
           <div className="min-w-0">{children}</div>
         </div>
       </PageContainer>
 
       <ResponsiveDrawer isOpen={isSidebarOpen && !isDesktop} onClose={() => setIsSidebarOpen(false)} title="Navigation">
-        <DashboardSidebar />
+        <Suspense fallback={<div className="pf-card h-[420px] rounded-lg" />}>
+          <DashboardSidebar />
+        </Suspense>
       </ResponsiveDrawer>
 
       <BottomNavigation links={mobileDashboardNavLinks} />

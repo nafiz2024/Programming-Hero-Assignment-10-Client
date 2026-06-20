@@ -30,6 +30,7 @@ export default function PromptCard({
   copyCount,
   description,
   difficulty,
+  id,
   aiTool,
   rating,
   title,
@@ -83,7 +84,7 @@ export default function PromptCard({
           >
             <Bookmark className="h-4 w-4" />
           </button>
-          <Button as={Link} href="/prompts" size="sm" variant="secondary">
+          <Button as={Link} href={`/prompts/${id}`} size="sm" variant="secondary">
             View Details
           </Button>
         </div>
