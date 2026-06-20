@@ -11,6 +11,8 @@ import {
   UserRound,
   UserRoundPlus,
   Bookmark,
+  FileText,
+  PlusSquare,
 } from "lucide-react";
 
 export const primaryNavLinks = [
@@ -38,5 +40,20 @@ export const mobileDashboardNavLinks = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/dashboard/saved", label: "Saved", icon: Bookmark },
   { href: "/dashboard/reviews", label: "Reviews", icon: MessageSquare },
+  { href: "/dashboard/profile", label: "Profile", icon: UserRound },
+];
+
+export const creatorDashboardNavLinks = [
+  { href: "/creator", label: "Creator Dashboard", icon: LayoutDashboard },
+  { href: "/creator/prompts", label: "My Prompts", icon: FileText },
+  { href: "/creator/prompts/new", label: "Add New Prompt", icon: PlusSquare },
+  { href: "/dashboard/profile", label: "Profile Settings", icon: UserRound },
+  { action: "logout", label: "Logout", icon: LogOut },
+];
+
+export const mobileCreatorNavLinks = [
+  { href: "/creator", label: "Home", icon: Home },
+  { href: "/creator/prompts", label: "Prompts", icon: FileText },
+  { href: "/creator/prompts/new", label: "Create", icon: PlusSquare },
   { href: "/dashboard/profile", label: "Profile", icon: UserRound },
 ];

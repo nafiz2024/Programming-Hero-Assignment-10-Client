@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboard } from "@/hooks/useDashboard";
-import { dashboardNavLinks } from "@/lib/navigation";
+import { creatorDashboardNavLinks, dashboardNavLinks } from "@/lib/navigation";
 import { toastError, toastSuccess } from "@/lib/toast";
 
 export default function DashboardSidebar({ onNavigate }) {
@@ -19,6 +19,8 @@ export default function DashboardSidebar({ onNavigate }) {
   const { signOut } = useAuth();
   const { user } = useDashboard();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const isCreatorArea = pathname.startsWith("/creator");
+  const navLinks = isCreatorArea ? creatorDashboardNavLinks : dashboardNavLinks;
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -43,12 +45,14 @@ export default function DashboardSidebar({ onNavigate }) {
         </div>
         <div>
           <p className="text-xl font-semibold tracking-tight text-slate-950">PromptFlow</p>
-          <p className="text-xs uppercase tracking-[0.24em] text-primary">User Workspace</p>
+          <p className="text-xs uppercase tracking-[0.24em] text-primary">
+            {isCreatorArea ? "Creator Dashboard" : "User Workspace"}
+          </p>
         </div>
       </Link>
 
       <nav className="space-y-2">
-        {dashboardNavLinks.map(({ action, href, icon: Icon, label }) => {
+        {navLinks.map(({ action, href, icon: Icon, label }) => {
           if (action === "logout") {
             return (
               <button

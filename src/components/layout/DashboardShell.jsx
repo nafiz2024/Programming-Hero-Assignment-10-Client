@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Bell, Menu, MoonStar, Search } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Bell, Menu, MoonStar, Plus, Search } from "lucide-react";
 
 import BottomNavigation from "@/components/layout/BottomNavigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
@@ -10,11 +11,14 @@ import Button from "@/components/ui/Button";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useDashboard } from "@/hooks/useDashboard";
-import { mobileDashboardNavLinks } from "@/lib/navigation";
+import { mobileCreatorNavLinks, mobileDashboardNavLinks } from "@/lib/navigation";
 
 export default function DashboardShell({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const pathname = usePathname();
   const { user } = useDashboard();
+  const isCreatorArea = pathname.startsWith("/creator");
+  const mobileLinks = isCreatorArea ? mobileCreatorNavLinks : mobileDashboardNavLinks;
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.08),transparent_24%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.08),transparent_20%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] pb-24 md:pb-0">
@@ -64,6 +68,13 @@ export default function DashboardShell({ children }) {
                 <MoonStar className="h-4 w-4" />
               </button>
 
+              {isCreatorArea ? (
+                <Button as={Link} className="hidden md:inline-flex" href="/creator/prompts/new">
+                  <Plus className="h-4 w-4" />
+                  Add New Prompt
+                </Button>
+              ) : null}
+
               <Link
                 className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm"
                 href="/dashboard/profile"
@@ -90,7 +101,7 @@ export default function DashboardShell({ children }) {
         <DashboardSidebar onNavigate={() => setIsSidebarOpen(false)} />
       </ResponsiveDrawer>
 
-      <BottomNavigation links={mobileDashboardNavLinks} />
+      <BottomNavigation links={mobileLinks} />
     </div>
   );
 }
