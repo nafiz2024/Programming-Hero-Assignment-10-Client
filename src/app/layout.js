@@ -16,8 +16,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html className={geist.className} data-scroll-behavior="smooth" lang="en">
-      <body className="bg-background text-foreground">
+    <html className={geist.className} data-scroll-behavior="smooth" lang="en" suppressHydrationWarning>
+      <body className="bg-background text-foreground" suppressHydrationWarning>
         <AuthProvider>
           <UIProvider>{children}</UIProvider>
         </AuthProvider>

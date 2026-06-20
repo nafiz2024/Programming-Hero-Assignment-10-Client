@@ -254,6 +254,7 @@ export default function PromptDetailsClient({ promptId }) {
     error: "",
   });
   const [visibleReviews, setVisibleReviews] = useState(3);
+  const prompt = promptState.item;
 
   async function loadPrompt() {
     setPromptState((currentState) => ({
@@ -473,7 +474,6 @@ export default function PromptDetailsClient({ promptId }) {
     };
   }, [authLoading, isAuthenticated, promptId]);
 
-  const prompt = promptState.item;
   const reviewSummary = useMemo(
     () => ({
       averageRating:

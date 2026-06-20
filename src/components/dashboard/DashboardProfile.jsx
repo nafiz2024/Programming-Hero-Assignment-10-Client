@@ -55,6 +55,10 @@ export default function DashboardProfile() {
     return <ErrorState description={error} onRetry={refreshDashboard} title="Unable to load profile" />;
   }
 
+  if (!user) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <>
       <div className="space-y-6">
