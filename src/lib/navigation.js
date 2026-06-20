@@ -13,6 +13,7 @@ import {
   Bookmark,
   FileText,
   PlusSquare,
+  BadgePlus,
 } from "lucide-react";
 
 export const primaryNavLinks = [
@@ -30,6 +31,7 @@ export const authNavLinks = [
 
 export const dashboardNavLinks = [
   { href: "/dashboard", label: "Dashboard", icon: Grid2x2 },
+  { href: "/dashboard/prompts", label: "My Prompts", icon: FileText },
   { href: "/dashboard/profile", label: "Profile", icon: UserRound },
   { href: "/dashboard/saved", label: "Saved Prompts", icon: Heart },
   { href: "/dashboard/reviews", label: "My Reviews", icon: MessageSquare },
@@ -38,8 +40,8 @@ export const dashboardNavLinks = [
 
 export const mobileDashboardNavLinks = [
   { href: "/dashboard", label: "Home", icon: Home },
+  { href: "/dashboard/prompts", label: "Prompts", icon: BadgePlus },
   { href: "/dashboard/saved", label: "Saved", icon: Bookmark },
-  { href: "/dashboard/reviews", label: "Reviews", icon: MessageSquare },
   { href: "/dashboard/profile", label: "Profile", icon: UserRound },
 ];
 

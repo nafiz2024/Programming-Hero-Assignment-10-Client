@@ -1,5 +1,10 @@
 import { formatCompactNumber, normalizePromptPayload } from "@/lib/marketplace";
 import { getUserImageSrc } from "@/lib/auth";
+import {
+  normalizeCreatorPrompt,
+  normalizeCreatorPrompts,
+  toCreatorPromptPayload,
+} from "@/lib/creator";
 
 const PROFILE_STORAGE_KEY = "pf-dashboard-profile";
 const REVIEWS_STORAGE_KEY = "pf-dashboard-reviews";
@@ -193,6 +198,142 @@ export function buildDashboardStats({ bookmarks, promptCatalog, reviews, user })
       accent: "from-fuchsia-500 to-violet-500",
     },
   ];
+}
+
+export function normalizeOwnedPrompts(payload, user) {
+  return normalizeCreatorPrompts(payload, user);
+}
+
+export function buildDashboardPromptStats(ownedPrompts, bookmarks, reviews, user) {
+  const promptCount = ownedPrompts.length;
+  const savedCount = bookmarks.length;
+  const reviewsCount = reviews.length;
+
+  return [
+    {
+      id: "prompts",
+      label: "Total Prompts",
+      value: promptCount,
+      meta: `+${Math.max(2, Math.round(promptCount * 0.24))} this month`,
+      accent: "from-violet-500 to-indigo-500",
+    },
+    {
+      id: "saved",
+      label: "Saved Prompts",
+      value: savedCount,
+      meta: `+${Math.max(1, Math.round(savedCount * 0.18))} this month`,
+      accent: "from-emerald-400 to-teal-500",
+    },
+    {
+      id: "reviews",
+      label: "My Reviews",
+      value: reviewsCount,
+      meta: `+${Math.max(1, Math.round(reviewsCount * 0.16))} this month`,
+      accent: "from-amber-400 to-orange-500",
+    },
+    {
+      id: "plan",
+      label: "Account Status",
+      value: toTitleCase(user.subscription || "Free"),
+      meta: user.subscription?.toLowerCase() === "free" ? "Upgrade to Premium" : "Premium benefits active",
+      accent: "from-sky-500 to-indigo-500",
+    },
+  ];
+}
+
+export function buildPromptPerformance(ownedPrompts) {
+  const fallbackDates = ["May 5", "May 10", "May 15", "May 20", "May 25", "May 30"];
+  const fallbackCopies = [320, 620, 430, 640, 580, 610];
+  const fallbackEarnings = [140, 320, 260, 410, 360, 430];
+
+  const topPrompts = [...ownedPrompts]
+    .sort((left, right) => (right.copyCount || 0) - (left.copyCount || 0))
+    .slice(0, 5)
+    .map((prompt, index) => ({
+      ...prompt,
+      earnings: Math.max(0, Math.round((prompt.copyCount || 0) * 0.18) + 12 + index * 4),
+    }));
+
+  const series = fallbackDates.map((label, index) => ({
+    label,
+    copies: Math.max(120, fallbackCopies[index] + ownedPrompts.length * 4 - index * 5),
+    earnings: Math.max(60, fallbackEarnings[index] + ownedPrompts.length * 3 - index * 6),
+  }));
+
+  return {
+    topPrompts,
+    series,
+    totalCopies: ownedPrompts.reduce((sum, prompt) => sum + (prompt.copyCount || 0), 0),
+    averageRating:
+      ownedPrompts.length > 0
+        ? ownedPrompts.reduce((sum, prompt) => sum + (prompt.rating || 0), 0) / ownedPrompts.length
+        : 4.7,
+    totalEarnings: topPrompts.reduce((sum, prompt) => sum + prompt.earnings, 0),
+  };
+}
+
+export function buildUserDashboardActivity({ bookmarks, reviews, user, ownedPrompts }) {
+  const promptActivities = ownedPrompts.slice(0, 2).map((prompt, index) => ({
+    id: `prompt-${prompt.id}`,
+    icon: index % 2 === 0 ? "plus" : "copy",
+    title: `${prompt.statusValue === "approved" ? "Created" : "Updated"} prompt "${prompt.title}"`,
+    description:
+      prompt.statusValue === "approved"
+        ? `${prompt.title} is now part of your workspace activity.`
+        : `${prompt.title} is currently ${prompt.status.toLowerCase()}.`,
+    date: prompt.updatedAt || prompt.createdAt,
+  }));
+
+  const bookmarkActivities = bookmarks.slice(0, 2).map((bookmark, index) => ({
+    id: `bookmark-${bookmark.id}-${index}`,
+    icon: "bookmark",
+    title: `Bookmarked "${bookmark.title}"`,
+    description: `Saved ${bookmark.title} for quick access later.`,
+    date: bookmark.savedAt || bookmark.createdAt,
+  }));
+
+  const reviewActivities = reviews.slice(0, 2).map((review) => ({
+    id: `review-${review.id}`,
+    icon: "star",
+    title: `Reviewed "${review.promptTitle}"`,
+    description: `Left a ${review.rating}-star review for ${review.promptTitle}.`,
+    date: review.createdAt,
+  }));
+
+  return [
+    ...promptActivities,
+    ...bookmarkActivities,
+    ...reviewActivities,
+    {
+      id: "joined",
+      icon: "user",
+      title: `Welcome to PromptFlow, ${user.name.split(" ")[0]}`,
+      description: "Your workspace is ready for discovering, saving, and submitting prompts.",
+      date: user.createdAt,
+    },
+  ]
+    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
+    .slice(0, 5);
+}
+
+export function buildRecommendedForFreeUser(promptCatalog, bookmarks, ownedPrompts) {
+  const bookmarkedIds = new Set(bookmarks.map((bookmark) => bookmark.id));
+  const ownedIds = new Set(ownedPrompts.map((prompt) => prompt.id));
+  return promptCatalog
+    .filter((prompt) => !bookmarkedIds.has(prompt.id) && !ownedIds.has(prompt.id))
+    .slice(0, 3);
+}
+
+export function toDashboardPromptPayload(values, user, existingPrompt) {
+  return toCreatorPromptPayload(values, user, existingPrompt);
+}
+
+export function normalizeDashboardPromptResponse(response, user, existingPrompt) {
+  return normalizeCreatorPrompt(
+    response?.prompt || response?.data || response || existingPrompt || {},
+    0,
+    user,
+  );
 }
 
 export function buildRecentActivity({ user, bookmarks, reviews }) {

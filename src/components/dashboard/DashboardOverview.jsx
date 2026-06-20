@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, Clock3, Copy, Star, Sparkles, TrendingUp } from "lucide-react";
+import { BadgeCheck, Bookmark, Crown, Plus, Star } from "lucide-react";
 
 import DashboardPageHeader from "@/components/dashboard/DashboardPageHeader";
 import { MotionStagger, MotionStaggerItem } from "@/components/shared/MotionStagger";
 import MotionReveal from "@/components/shared/MotionReveal";
 import Button from "@/components/ui/Button";
 import DashboardSkeleton from "@/components/ui/DashboardSkeleton";
-import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
-import UserAvatar from "@/components/ui/UserAvatar";
 import { useDashboard } from "@/hooks/useDashboard";
 import { formatDashboardDate } from "@/lib/dashboard";
 import { formatCompactNumber } from "@/lib/marketplace";
@@ -19,84 +17,69 @@ function StatCard({ stat }) {
   return (
     <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
       <div className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${stat.accent} text-white shadow-md`}>
-        <TrendingUp className="h-5 w-5" />
+        <BadgeCheck className="h-5 w-5" />
       </div>
-      <p className="mt-5 text-sm font-medium uppercase tracking-[0.18em] text-slate-400">{stat.label}</p>
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{stat.value}</p>
-      <p className="mt-2 text-sm text-slate-500">{stat.meta}</p>
+      <p className="mt-4 text-base font-medium text-slate-500">{stat.label}</p>
+      <p className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">{stat.value}</p>
+      <p className="mt-2 text-sm text-emerald-600">{stat.meta}</p>
     </div>
   );
 }
 
 function ActivityItem({ activity }) {
+  const iconTone =
+    activity.icon === "bookmark"
+      ? "bg-violet-50 text-violet-500"
+      : activity.icon === "star"
+      ? "bg-amber-50 text-amber-500"
+      : activity.icon === "plus"
+      ? "bg-emerald-50 text-emerald-500"
+      : "bg-sky-50 text-sky-500";
+
   return (
-    <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Clock3 className="h-4 w-4" />
+    <div className="flex items-start gap-4 border-b border-slate-100 py-4 last:border-b-0 first:pt-0">
+      <div className={`flex h-11 w-11 items-center justify-center rounded-full ${iconTone}`}>
+        {activity.icon === "bookmark" ? <Bookmark className="h-4 w-4" /> : activity.icon === "star" ? <Star className="h-4 w-4 fill-current" /> : activity.icon === "plus" ? <Plus className="h-4 w-4" /> : <BadgeCheck className="h-4 w-4" />}
       </div>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
         <p className="mt-1 text-sm leading-6 text-slate-500">{activity.description}</p>
-        <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-          {formatDashboardDate(activity.date)}
-        </p>
       </div>
-    </div>
-  );
-}
-
-function BookmarkCard({ bookmark }) {
-  return (
-    <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-      <div className={`mb-4 h-32 rounded-[20px] bg-gradient-to-br ${bookmark.accent}`} />
-      <h3 className="text-lg font-semibold text-slate-950">{bookmark.title}</h3>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">{bookmark.aiTool}</span>
-        <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-600">{bookmark.category}</span>
-      </div>
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
-        <span>Saved {formatDashboardDate(bookmark.savedAt)}</span>
-        <span className="inline-flex items-center gap-1.5">
-          <Copy className="h-4 w-4" />
-          {formatCompactNumber(bookmark.copyCount)}
-        </span>
-      </div>
+      <p className="ml-auto shrink-0 text-sm text-slate-400">
+        {activity.timeAgo || formatDashboardDate(activity.date)}
+      </p>
     </div>
   );
 }
 
 function RecommendedCard({ prompt }) {
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-      <div className={`mb-4 h-32 rounded-[20px] bg-gradient-to-br ${prompt.accent}`} />
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-slate-950">{prompt.title}</h3>
-        <p className="line-clamp-2 text-sm leading-6 text-slate-500">{prompt.description}</p>
-      </div>
-      <div className="mt-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-sm text-slate-500">
+    <div className="flex items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+      <div className={`h-28 w-36 shrink-0 rounded-[20px] bg-gradient-to-br ${prompt.accent}`} />
+      <div className="min-w-0 flex-1">
+        <h3 className="text-xl font-semibold text-slate-950">{prompt.title}</h3>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">{prompt.aiTool}</span>
+          <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-600">{prompt.category}</span>
+        </div>
+        <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500">{prompt.description}</p>
+        <div className="mt-4 flex items-center gap-5 text-sm text-slate-500">
           <span className="inline-flex items-center gap-1.5">
             <Star className="h-4 w-4 fill-current text-amber-400" />
             {prompt.rating.toFixed(1)}
           </span>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{prompt.aiTool}</span>
+          <span>{formatCompactNumber(prompt.copyCount)} copies</span>
         </div>
-        <Button
-          as={Link}
-          className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-          href={`/prompts/${prompt.id}`}
-          size="sm"
-          variant="secondary"
-        >
-          View
-        </Button>
       </div>
+      <button className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50" type="button">
+        <Bookmark className="h-4 w-4" />
+      </button>
     </div>
   );
 }
 
 export default function DashboardOverview() {
-  const { activity, bookmarks, error, recommendedPrompts, refreshDashboard, stats, status, user } = useDashboard();
+  const { error, freeUserRecommendations, promptStats, refreshDashboard, status, user, userActivity } = useDashboard();
 
   if (status === "loading") {
     return <DashboardSkeleton />;
@@ -109,58 +92,54 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-6">
       <DashboardPageHeader
-        crumbs={["Dashboard", "Overview"]}
-        description="Keep track of your saved prompts, reviews, and recent account activity."
-        title={`Welcome back, ${user.name.split(" ")[0]}`}
+        crumbs={["Dashboard"]}
+        description="Here's what's happening in your account today."
+        title={`Good Morning, ${user.name.split(" ")[0]}!`}
       />
 
       <MotionReveal preset="viewportReveal">
-        <div className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,rgba(139,92,246,0.92),rgba(99,102,241,0.88),rgba(56,189,248,0.82))] p-6 text-white shadow-[0_26px_70px_rgba(99,102,241,0.24)] md:p-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <UserAvatar
-                alt={user.name}
-                className="h-24 w-24 border-4 border-white/70 bg-white/15 text-2xl font-semibold text-white shadow-lg"
-                fallback={user.initials}
-                src={user.image || user.picture || user.photoURL || user.avatar || user.photo}
-              />
+        <section className="rounded-[28px] border border-slate-200 bg-white px-5 py-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:px-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                <Crown className="h-6 w-6" />
+              </div>
               <div>
-                <h2 className="text-3xl font-semibold tracking-tight">{user.name}</h2>
-                <p className="mt-2 text-base text-white/85">{user.email}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-white/18 px-3 py-1 text-sm font-medium">{user.role}</span>
-                  <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-900">
-                    {user.subscription} plan
-                  </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Free Plan</h2>
+                  <span className="text-base text-slate-500">You&apos;re on the Free Plan</span>
                 </div>
+                <p className="mt-2 text-base text-slate-500">Upgrade to unlock premium prompts and more features.</p>
               </div>
             </div>
-            <Button as={Link} className="bg-slate-950 text-white hover:bg-slate-900" href="/dashboard/profile" variant="secondary">
-              Edit Profile
-            </Button>
+            <Button className="md:min-w-[180px]">Upgrade for $5</Button>
           </div>
-        </div>
+        </section>
       </MotionReveal>
 
-      <MotionStagger className="grid gap-4 md:grid-cols-2 xl:grid-cols-5" preset="dashboardCardStagger">
-        {stats.map((stat) => (
+      <MotionStagger className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" preset="dashboardCardStagger">
+        {promptStats.map((stat) => (
           <MotionStaggerItem key={stat.id}>
             <StatCard stat={stat} />
           </MotionStaggerItem>
         ))}
       </MotionStagger>
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_1.45fr]">
         <MotionReveal preset="viewportReveal">
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-6">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Recent Activity</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">What happened lately</h2>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Recent Activity</h2>
+                <p className="mt-2 text-sm text-slate-500">A quick snapshot of your latest prompt actions.</p>
               </div>
+              <Link className="text-sm font-semibold text-primary transition hover:text-secondary" href="/dashboard/prompts">
+                View All
+              </Link>
             </div>
-            <div className="space-y-3">
-              {activity.map((item) => (
+
+            <div>
+              {userActivity.map((item) => (
                 <ActivityItem activity={item} key={item.id} />
               ))}
             </div>
@@ -171,54 +150,57 @@ export default function DashboardOverview() {
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-6">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Recent Bookmarks</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Saved prompts</h2>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Recommended for You</h2>
+                <p className="mt-2 text-sm text-slate-500">Personalized prompts based on your activity.</p>
               </div>
-              <Button
-                as={Link}
-                className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                href="/dashboard/saved"
-                size="sm"
-                variant="secondary"
-              >
+              <Link className="text-sm font-semibold text-primary transition hover:text-secondary" href="/prompts">
                 View All
-              </Button>
+              </Link>
             </div>
-            {bookmarks.length === 0 ? (
-              <EmptyState
-                actionLabel="Browse Prompts"
-                description="You haven't saved any prompts yet. Explore the marketplace and start bookmarking."
-                onAction={() => window.location.assign("/prompts")}
-                title="No saved prompts yet"
-              />
-            ) : (
-              <div className="space-y-4">
-                {bookmarks.slice(0, 3).map((bookmark) => (
-                  <BookmarkCard bookmark={bookmark} key={bookmark.bookmarkId} />
-                ))}
-              </div>
-            )}
+
+            <div className="space-y-4">
+              {freeUserRecommendations.map((prompt) => (
+                <RecommendedCard key={prompt.id} prompt={prompt} />
+              ))}
+            </div>
           </section>
         </MotionReveal>
       </div>
 
       <MotionReveal preset="viewportReveal">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-6">
-          <div className="mb-5 flex items-center justify-between gap-3">
+        <section className="overflow-hidden rounded-[30px] bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,0.22),transparent_22%),linear-gradient(135deg,#0f172a_0%,#151d3d_50%,#1d2351_100%)] p-6 text-white shadow-[0_26px_70px_rgba(15,23,42,0.24)] md:p-8">
+          <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr] xl:items-center">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Recommended Prompts</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Suggested for you</h2>
+              <span className="inline-flex rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                Upgrade to Premium
+              </span>
+              <h2 className="mt-4 text-4xl font-semibold tracking-tight">Unlock Every Premium Prompt for Only $5</h2>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-white/75">
+                Get one-time access to all premium prompts, advanced features, and exclusive tools to supercharge your productivity.
+              </p>
             </div>
-            <Link className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-secondary" href="/prompts">
-              <Sparkles className="h-4 w-4" />
-              Explore all prompts
-            </Link>
-          </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {recommendedPrompts.map((prompt) => (
-              <RecommendedCard key={prompt.id} prompt={prompt} />
-            ))}
+            <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
+              <div className="space-y-3 text-sm text-white/80">
+                {[
+                  "Access all premium prompts",
+                  "Copy premium prompts without limits",
+                  "Submit reviews and earn trust",
+                  "Premium account badge",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
+                    <BadgeCheck className="h-4 w-4 text-white" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <Button className="w-full md:min-w-[220px]">Upgrade Now - $5</Button>
+                <Button className="border-white/12 bg-white/8 text-white hover:bg-white/12" variant="secondary">
+                  Learn more about Premium
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
       </MotionReveal>

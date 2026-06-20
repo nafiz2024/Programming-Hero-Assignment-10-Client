@@ -18,6 +18,7 @@ export default function DashboardShell({ children }) {
   const pathname = usePathname();
   const { user } = useDashboard();
   const isCreatorArea = pathname.startsWith("/creator");
+  const isUserPromptArea = pathname.startsWith("/dashboard/prompts");
   const mobileLinks = isCreatorArea ? mobileCreatorNavLinks : mobileDashboardNavLinks;
 
   return (
@@ -70,6 +71,11 @@ export default function DashboardShell({ children }) {
 
               {isCreatorArea ? (
                 <Button as={Link} className="hidden md:inline-flex" href="/creator/prompts/new">
+                  <Plus className="h-4 w-4" />
+                  Add New Prompt
+                </Button>
+              ) : isUserPromptArea ? (
+                <Button as={Link} className="hidden md:inline-flex" href="/dashboard/prompts/new">
                   <Plus className="h-4 w-4" />
                   Add New Prompt
                 </Button>
