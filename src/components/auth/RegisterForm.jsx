@@ -10,7 +10,8 @@ import { useForm, useWatch } from "react-hook-form";
 import MotionReveal from "@/components/shared/MotionReveal";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
-import { getPostAuthRedirect, registerSchema } from "@/lib/auth";
+import { authApi } from "@/lib/api";
+import { getGoogleSocialPayload, getPostAuthRedirect, registerSchema } from "@/lib/auth";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
 import AuthField from "@/components/auth/AuthField";
 
@@ -32,9 +33,10 @@ const passwordChecks = [
   },
 ];
 
-export default function RegisterForm() {
+export default function RegisterForm({ socialStatus }) {
   const router = useRouter();
-  const { isAuthenticated, loading, signUp, user } = useAuth();
+  const { isAuthenticated, loading, refreshUser, signUp, user } = useAuth();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -65,6 +67,48 @@ export default function RegisterForm() {
     }
   }, [isAuthenticated, loading, router, user]);
 
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (socialStatus === "google-error") {
+      toastError("Google sign up was cancelled or failed.");
+      router.replace("/register");
+      return;
+    }
+
+    if (socialStatus !== "google" || isAuthenticated) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function completeSocialLogin() {
+      try {
+        const nextUser = await refreshUser();
+
+        if (!isMounted || !nextUser) {
+          throw new Error("Unable to complete Google sign up.");
+        }
+
+        toastSuccess("Google sign up successful");
+        router.replace(getPostAuthRedirect(nextUser));
+      } catch (error) {
+        if (isMounted) {
+          toastError(error.message || "Unable to complete Google sign up.");
+          router.replace("/register");
+        }
+      }
+    }
+
+    completeSocialLogin();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, loading, refreshUser, router, socialStatus]);
+
   async function onSubmit(values) {
     setSubmitError("");
 
@@ -81,6 +125,24 @@ export default function RegisterForm() {
       const message = error.message || "Unable to create your account right now.";
       setSubmitError(message);
       toastError(message);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setIsGoogleLoading(true);
+
+    try {
+      const socialResponse = await authApi.signInSocial(getGoogleSocialPayload("/register"));
+      const redirectUrl = socialResponse?.url;
+
+      if (!redirectUrl) {
+        throw new Error("Google sign-in URL was not returned by the server.");
+      }
+
+      window.location.assign(redirectUrl);
+    } catch (error) {
+      setIsGoogleLoading(false);
+      toastError(error.message || "Unable to start Google sign up.");
     }
   }
 
@@ -199,11 +261,12 @@ export default function RegisterForm() {
 
         <button
           className="flex min-h-[56px] w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition hover:border-slate-300 hover:bg-slate-50"
-          onClick={() => toastWarning("Google sign up UI is ready for a future integration.")}
+          disabled={isGoogleLoading}
+          onClick={handleGoogleSignIn}
           type="button"
         >
           <Globe className="h-5 w-5 text-primary" />
-          Sign up with Google
+          {isGoogleLoading ? "Redirecting..." : "Sign up with Google"}
         </button>
 
         <p className="text-center text-base text-slate-500">

@@ -95,6 +95,13 @@ export const authApi = {
     });
   },
 
+  signInSocial(payload) {
+    return apiRequest("/api/auth/sign-in/social", {
+      method: "POST",
+      body: payload,
+    });
+  },
+
   signOut() {
     return apiRequest("/api/auth/sign-out", {
       method: "POST",

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+
 export const loginSchema = z.object({
   email: z.email("Please enter a valid email address."),
   password: z
@@ -73,3 +75,25 @@ export function getPostAuthRedirect(user) {
   return "/dashboard";
 }
 
+export function buildSocialCallbackUrl(pathname) {
+  if (typeof window === "undefined") {
+    return pathname;
+  }
+
+  return `${window.location.origin}${pathname}`;
+}
+
+export function getGoogleSocialPayload(pathname) {
+  if (!API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_API_URL is not configured.");
+  }
+
+  const callbackPath = `${pathname}?social=google`;
+  const errorPath = `${pathname}?social=google-error`;
+
+  return {
+    provider: "google",
+    callbackURL: buildSocialCallbackUrl(callbackPath),
+    errorCallbackURL: buildSocialCallbackUrl(errorPath),
+  };
+}

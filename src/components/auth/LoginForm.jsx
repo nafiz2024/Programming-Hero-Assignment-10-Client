@@ -10,14 +10,16 @@ import { useForm } from "react-hook-form";
 import MotionReveal from "@/components/shared/MotionReveal";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
-import { getPostAuthRedirect, loginSchema } from "@/lib/auth";
+import { authApi } from "@/lib/api";
+import { getGoogleSocialPayload, getPostAuthRedirect, loginSchema } from "@/lib/auth";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
 import AuthField from "@/components/auth/AuthField";
 
-export default function LoginForm() {
+export default function LoginForm({ socialStatus }) {
   const router = useRouter();
-  const { isAuthenticated, loading, signIn, user } = useAuth();
+  const { isAuthenticated, loading, refreshUser, signIn, user } = useAuth();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const {
     formState: { errors, isSubmitting },
@@ -38,6 +40,48 @@ export default function LoginForm() {
     }
   }, [isAuthenticated, loading, router, user]);
 
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (socialStatus === "google-error") {
+      toastError("Google login was cancelled or failed.");
+      router.replace("/login");
+      return;
+    }
+
+    if (socialStatus !== "google" || isAuthenticated) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function completeSocialLogin() {
+      try {
+        const nextUser = await refreshUser();
+
+        if (!isMounted || !nextUser) {
+          throw new Error("Unable to complete Google login.");
+        }
+
+        toastSuccess("Google login successful");
+        router.replace(getPostAuthRedirect(nextUser));
+      } catch (error) {
+        if (isMounted) {
+          toastError(error.message || "Unable to complete Google login.");
+          router.replace("/login");
+        }
+      }
+    }
+
+    completeSocialLogin();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, loading, refreshUser, router, socialStatus]);
+
   async function onSubmit(values) {
     setSubmitError("");
 
@@ -49,6 +93,24 @@ export default function LoginForm() {
       const message = error.message || "Unable to log in with those credentials.";
       setSubmitError(message);
       toastError(message);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setIsGoogleLoading(true);
+
+    try {
+      const socialResponse = await authApi.signInSocial(getGoogleSocialPayload("/login"));
+      const redirectUrl = socialResponse?.url;
+
+      if (!redirectUrl) {
+        throw new Error("Google sign-in URL was not returned by the server.");
+      }
+
+      window.location.assign(redirectUrl);
+    } catch (error) {
+      setIsGoogleLoading(false);
+      toastError(error.message || "Unable to start Google login.");
     }
   }
 
@@ -108,11 +170,12 @@ export default function LoginForm() {
 
         <button
           className="flex min-h-[56px] w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition hover:border-slate-300 hover:bg-slate-50"
-          onClick={() => toastWarning("Google login UI is ready for a future integration.")}
+          disabled={isGoogleLoading}
+          onClick={handleGoogleSignIn}
           type="button"
         >
           <Globe className="h-5 w-5 text-primary" />
-          Continue with Google
+          {isGoogleLoading ? "Redirecting..." : "Continue with Google"}
         </button>
 
         <p className="text-center text-base text-slate-500">
