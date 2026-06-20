@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --pf-primary: #2563eb;
+  --pf-secondary: #14b8a6;
+  --pf-success: #16a34a;
+  --pf-warning: #f59e0b;
+  --pf-danger: #dc2626;
+  --pf-background: #f8fafc;
+  --pf-foreground: #0f172a;
+}
+
 html,
 body {
   min-height: 100%;
@@ -9,8 +19,8 @@ body {
 
 body {
   margin: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--pf-background);
+  color: var(--pf-foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 

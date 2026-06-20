@@ -1,3 +1,5 @@
+const { heroui } = require("@heroui/react");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -9,7 +11,33 @@ module.exports = {
     "./src/data/**/*.{js,jsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        background: "#f8fafc",
+        foreground: "#0f172a",
+        primary: "#2563eb",
+        secondary: "#14b8a6",
+        success: "#16a34a",
+        warning: "#f59e0b",
+        danger: "#dc2626",
+      },
+    },
   },
-  plugins: [],
+  plugins: [
+    heroui({
+      themes: {
+        light: {
+          colors: {
+            background: "#f8fafc",
+            foreground: "#0f172a",
+            primary: "#2563eb",
+            secondary: "#14b8a6",
+            success: "#16a34a",
+            warning: "#f59e0b",
+            danger: "#dc2626",
+          },
+        },
+      },
+    }),
+  ],
 };
