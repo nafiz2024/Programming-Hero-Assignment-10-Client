@@ -8,6 +8,7 @@ import BottomNavigation from "@/components/layout/BottomNavigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
 import Button from "@/components/ui/Button";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useDashboard } from "@/hooks/useDashboard";
 import { mobileDashboardNavLinks } from "@/lib/navigation";
 
@@ -67,14 +68,12 @@ export default function DashboardShell({ children }) {
                 className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm"
                 href="/dashboard/profile"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradient text-xs font-semibold text-white">
-                  {user?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img alt={user.name} className="h-full w-full rounded-full object-cover" src={user.image} />
-                  ) : (
-                    user?.initials || "PF"
-                  )}
-                </div>
+                <UserAvatar
+                  alt={user?.name || "PromptFlow User"}
+                  className="h-10 w-10 bg-brand-gradient text-xs text-white"
+                  fallback={user?.initials || "PF"}
+                  src={user?.image || user?.photo}
+                />
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold text-slate-900">{user?.name || "PromptFlow User"}</p>
                   <p className="text-xs text-slate-500">{user?.role || "User"}</p>

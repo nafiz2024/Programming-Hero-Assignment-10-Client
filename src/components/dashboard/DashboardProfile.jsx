@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import DashboardSkeleton from "@/components/ui/DashboardSkeleton";
 import ErrorState from "@/components/ui/ErrorState";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useDashboard } from "@/hooks/useDashboard";
 import { formatDashboardDate } from "@/lib/dashboard";
 import { toastSuccess } from "@/lib/toast";
@@ -63,13 +64,13 @@ export default function DashboardProfile() {
           <section className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,rgba(139,92,246,0.92),rgba(99,102,241,0.88),rgba(56,189,248,0.82))] p-6 text-white shadow-[0_26px_70px_rgba(99,102,241,0.24)] md:p-8">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-5">
-                <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-4 border-white/70 bg-white/15 text-3xl font-semibold shadow-lg">
-                  {user.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img alt={user.name} className="h-full w-full rounded-full object-cover" src={user.image} />
-                  ) : (
-                    user.initials
-                  )}
+                <div className="relative">
+                  <UserAvatar
+                    alt={user.name}
+                    className="h-28 w-28 border-4 border-white/70 bg-white/15 text-3xl text-white shadow-lg"
+                    fallback={user.initials}
+                    src={user.image || user.photo}
+                  />
                   <button
                     className="absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center rounded-full border border-white/80 bg-white text-slate-900 shadow-md"
                     onClick={openEditor}

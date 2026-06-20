@@ -7,6 +7,7 @@ import { Crown, LogOut, Sparkles } from "lucide-react";
 import clsx from "clsx";
 
 import Button from "@/components/ui/Button";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboard } from "@/hooks/useDashboard";
 import { dashboardNavLinks } from "@/lib/navigation";
@@ -103,14 +104,12 @@ export default function DashboardSidebar({ onNavigate }) {
 
         <div className="rounded-[24px] border border-slate-200 bg-slate-50/90 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-gradient text-sm font-semibold text-white">
-              {user?.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img alt={user.name} className="h-full w-full rounded-full object-cover" src={user.image} />
-              ) : (
-                user?.initials || "PF"
-              )}
-            </div>
+            <UserAvatar
+              alt={user?.name || "PromptFlow User"}
+              className="h-12 w-12 bg-brand-gradient text-sm text-white"
+              fallback={user?.initials || "PF"}
+              src={user?.image || user?.photo}
+            />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-950">{user?.name || "PromptFlow User"}</p>
               <p className="text-xs text-slate-500">{user?.subscription || "Free"} plan</p>
@@ -121,4 +120,3 @@ export default function DashboardSidebar({ onNavigate }) {
     </aside>
   );
 }
-

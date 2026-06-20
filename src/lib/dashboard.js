@@ -75,7 +75,8 @@ export function normalizeDashboardUser(payload, profileOverrides = {}) {
       profileOverrides.bio ||
       user.bio ||
       "PromptFlow member exploring, saving, and refining high-quality prompts for better outcomes.",
-    image: profileOverrides.image || user.image || "",
+    image: profileOverrides.image || user.image || user.photo || "",
+    photo: profileOverrides.image || user.photo || user.image || "",
     initials: baseName
       .split(" ")
       .filter(Boolean)
@@ -232,4 +233,3 @@ export function buildRecommendedPrompts(promptCatalog, bookmarks) {
   const bookmarkedIds = new Set(bookmarks.map((bookmark) => bookmark.id));
   return promptCatalog.filter((prompt) => !bookmarkedIds.has(prompt.id)).slice(0, 4);
 }
-
