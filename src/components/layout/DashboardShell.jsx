@@ -1,54 +1,94 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { Menu } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { Bell, Menu, MoonStar, Search } from "lucide-react";
 
 import BottomNavigation from "@/components/layout/BottomNavigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
 import Button from "@/components/ui/Button";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
-import PageContainer from "@/components/shared/PageContainer";
+import { useDashboard } from "@/hooks/useDashboard";
 import { mobileDashboardNavLinks } from "@/lib/navigation";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function DashboardShell({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 1200px)");
+  const { user } = useDashboard();
 
   return (
-    <div className="min-h-screen pb-24 md:pb-0">
-      <PageContainer as="div" className="py-5 md:py-6 desktop:py-8" size="xl">
-        {!isDesktop ? (
-          <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
-            <div>
-              <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">Responsive Shell</p>
-              <h1 className="text-h3">Dashboard Foundation</h1>
-            </div>
-            <Button
-              aria-label="Open navigation"
-              className="px-4"
-              onPress={() => setIsSidebarOpen(true)}
-              variant="secondary"
-            >
-              <Menu className="h-4 w-4" />
-            </Button>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.08),transparent_24%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.08),transparent_20%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] pb-24 md:pb-0">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1560px] gap-6 px-4 py-4 sm:px-5 md:px-6 desktop:px-8">
+        <div className="hidden w-[280px] shrink-0 desktop:block">
+          <div className="sticky top-4 h-[calc(100vh-32px)]">
+            <DashboardSidebar />
           </div>
-        ) : null}
-
-        <div className="grid gap-6 desktop:grid-cols-[280px_minmax(0,1fr)]">
-          <div className="hidden desktop:sticky desktop:top-24 desktop:block desktop:self-start">
-            <Suspense fallback={<div className="pf-card h-[480px] rounded-lg" />}>
-              <DashboardSidebar />
-            </Suspense>
-          </div>
-          <div className="min-w-0">{children}</div>
         </div>
-      </PageContainer>
 
-      <ResponsiveDrawer isOpen={isSidebarOpen && !isDesktop} onClose={() => setIsSidebarOpen(false)} title="Navigation">
-        <Suspense fallback={<div className="pf-card h-[420px] rounded-lg" />}>
-          <DashboardSidebar />
-        </Suspense>
+        <div className="min-w-0 flex-1">
+          <header className="mb-6 rounded-[28px] border border-slate-200/80 bg-white/88 px-4 py-4 shadow-[0_25px_70px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:px-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                aria-label="Open navigation"
+                className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 desktop:hidden"
+                onPress={() => setIsSidebarOpen(true)}
+                variant="secondary"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex min-h-[52px] items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
+                  <Search className="h-4 w-4 shrink-0 text-slate-400" />
+                  <input
+                    className="w-full border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                    placeholder="Search prompts, tools or tags..."
+                    type="text"
+                  />
+                  <span className="hidden rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-400 sm:inline-flex">
+                    ⌘ K
+                  </span>
+                </div>
+              </div>
+
+              <button
+                className="hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 md:inline-flex"
+                type="button"
+              >
+                <Bell className="h-4 w-4" />
+              </button>
+              <button
+                className="hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 md:inline-flex"
+                type="button"
+              >
+                <MoonStar className="h-4 w-4" />
+              </button>
+
+              <Link
+                className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                href="/dashboard/profile"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradient text-xs font-semibold text-white">
+                  {user?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img alt={user.name} className="h-full w-full rounded-full object-cover" src={user.image} />
+                  ) : (
+                    user?.initials || "PF"
+                  )}
+                </div>
+                <div className="hidden text-left sm:block">
+                  <p className="text-sm font-semibold text-slate-900">{user?.name || "PromptFlow User"}</p>
+                  <p className="text-xs text-slate-500">{user?.role || "User"}</p>
+                </div>
+              </Link>
+            </div>
+          </header>
+
+          <main>{children}</main>
+        </div>
+      </div>
+
+      <ResponsiveDrawer isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} title="Dashboard Navigation">
+        <DashboardSidebar onNavigate={() => setIsSidebarOpen(false)} />
       </ResponsiveDrawer>
 
       <BottomNavigation links={mobileDashboardNavLinks} />

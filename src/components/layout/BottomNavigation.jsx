@@ -9,7 +9,10 @@ export default function BottomNavigation({ links }) {
 
   return (
     <nav className="pf-card pf-safe-bottom fixed inset-x-4 bottom-4 z-40 rounded-xl px-3 py-2 md:hidden">
-      <div className="grid grid-cols-5 gap-1">
+      <div
+        className="grid gap-1"
+        style={{ gridTemplateColumns: `repeat(${Math.max(links.length, 1)}, minmax(0, 1fr))` }}
+      >
         {links.map(({ href, icon: Icon, label }) => {
           const isActive = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
 
