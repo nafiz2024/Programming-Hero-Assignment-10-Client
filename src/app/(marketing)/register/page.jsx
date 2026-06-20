@@ -1,14 +1,14 @@
-import PageContainer from "@/components/shared/PageContainer";
-import SectionHeader from "@/components/shared/SectionHeader";
+import AuthPageShell from "@/components/auth/AuthPageShell";
+import RegisterForm from "@/components/auth/RegisterForm";
 
 export default function RegisterPage() {
   return (
-    <PageContainer as="section" className="py-16" size="md">
-      <SectionHeader
-        description="Registration flow UI is not implemented yet. This route is a lightweight placeholder for the shared shell."
-        eyebrow="Placeholder"
-        title="Register"
-      />
-    </PageContainer>
+    <AuthPageShell
+      formIntro="Join PromptFlow and start your journey"
+      formTitle="Create Your Account"
+      mode="register"
+    >
+      <RegisterForm />
+    </AuthPageShell>
   );
 }

@@ -3,6 +3,7 @@
 import { createContext, startTransition, useEffect, useState } from "react";
 
 import { authApi, userApi } from "@/lib/api";
+import { normalizeAuthUser } from "@/lib/auth";
 
 export const AuthContext = createContext(undefined);
 
@@ -12,7 +13,7 @@ export function AuthProvider({ children }) {
 
   async function refreshUser() {
     try {
-      const currentUser = await userApi.getMe();
+      const currentUser = normalizeAuthUser(await userApi.getMe());
       setUser(currentUser);
       return currentUser;
     } catch {
@@ -21,14 +22,34 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signUp(name, email, password) {
-    await authApi.signUp({ name, email, password });
-    return refreshUser();
+  async function signUp(nameOrPayload, email, password, extras = {}) {
+    const payload =
+      typeof nameOrPayload === "object"
+        ? nameOrPayload
+        : { name: nameOrPayload, email, password, ...extras };
+    const response = await authApi.signUp(payload);
+    const responseUser = normalizeAuthUser(response);
+
+    if (responseUser) {
+      setUser(responseUser);
+    }
+
+    return (await refreshUser()) || responseUser;
   }
 
-  async function signIn(email, password) {
-    await authApi.signIn({ email, password });
-    return refreshUser();
+  async function signIn(emailOrPayload, password) {
+    const payload =
+      typeof emailOrPayload === "object"
+        ? emailOrPayload
+        : { email: emailOrPayload, password };
+    const response = await authApi.signIn(payload);
+    const responseUser = normalizeAuthUser(response);
+
+    if (responseUser) {
+      setUser(responseUser);
+    }
+
+    return (await refreshUser()) || responseUser;
   }
 
   async function signOut() {

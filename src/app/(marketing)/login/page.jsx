@@ -1,14 +1,14 @@
-import PageContainer from "@/components/shared/PageContainer";
-import SectionHeader from "@/components/shared/SectionHeader";
+import AuthPageShell from "@/components/auth/AuthPageShell";
+import LoginForm from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <PageContainer as="section" className="py-16" size="md">
-      <SectionHeader
-        description="Authentication screens are intentionally deferred. This route is a placeholder for shell validation."
-        eyebrow="Placeholder"
-        title="Login"
-      />
-    </PageContainer>
+    <AuthPageShell
+      formIntro="Login to your account to continue"
+      formTitle="Welcome Back"
+      mode="login"
+    >
+      <LoginForm />
+    </AuthPageShell>
   );
 }
