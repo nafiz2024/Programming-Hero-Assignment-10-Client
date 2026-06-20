@@ -4,6 +4,7 @@ import {
   Heart,
   Home,
   LayoutDashboard,
+  Layers3,
   LogIn,
   LogOut,
   MessageSquare,
@@ -18,9 +19,14 @@ import {
 export const primaryNavLinks = [
   { href: "/", label: "Home", icon: Home },
   { href: "/prompts", label: "All Prompts", icon: Sparkles },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/#categories", label: "Explore Categories", icon: Layers3 },
+  { href: "/#creators", label: "Top Creators", icon: UserRound },
+];
+
+export const authNavLinks = [
   { href: "/login", label: "Login", icon: LogIn },
-  { href: "/register", label: "Register", icon: UserRoundPlus },
+  { href: "/register", label: "Create Account", icon: UserRoundPlus },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];
 
 export const dashboardNavLinks = [

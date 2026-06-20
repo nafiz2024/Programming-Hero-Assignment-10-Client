@@ -5,10 +5,15 @@ import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import clsx from "clsx";
 
+import Button from "@/components/ui/Button";
 import PageContainer from "@/components/shared/PageContainer";
-import { primaryNavLinks } from "@/lib/navigation";
+import { authNavLinks, primaryNavLinks } from "@/lib/navigation";
 
 function isActiveLink(pathname, href) {
+  if (href.startsWith("/#")) {
+    return pathname === "/";
+  }
+
   if (href === "/") {
     return pathname === href;
   }
@@ -56,6 +61,15 @@ export default function Navbar() {
             );
           })}
         </nav>
+
+        <div className="hidden items-center gap-3 md:flex">
+          <Button as={Link} href={authNavLinks[0].href} size="sm" variant="secondary">
+            {authNavLinks[0].label}
+          </Button>
+          <Button as={Link} href={authNavLinks[1].href} size="sm">
+            {authNavLinks[1].label}
+          </Button>
+        </div>
       </PageContainer>
     </header>
   );
