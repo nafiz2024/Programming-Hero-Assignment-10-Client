@@ -154,6 +154,25 @@ export const promptApi = {
       body: payload,
     });
   },
+
+  copyPublic(id, payload = {}) {
+    return apiRequest(`/api/prompts/${id}/copy`, {
+      method: "POST",
+      body: payload,
+    });
+  },
+
+  bookmark(id) {
+    return apiRequest(`/api/prompts/${id}/bookmark`, {
+      method: "POST",
+    });
+  },
+
+  unbookmark(id) {
+    return apiRequest(`/api/prompts/${id}/bookmark`, {
+      method: "DELETE",
+    });
+  },
 };
 
 export const bookmarkApi = {
@@ -175,6 +194,13 @@ export const bookmarkApi = {
 };
 
 export const reviewApi = {
+  create(payload) {
+    return apiRequest("/api/reviews", {
+      method: "POST",
+      body: payload,
+    });
+  },
+
   createOrUpdate(promptId, payload) {
     return apiRequest(`/api/reviews/${promptId}`, {
       method: "POST",
@@ -216,6 +242,13 @@ export const paymentApi = {
 export const reportApi = {
   create(promptId, payload) {
     return apiRequest(`/api/reports/${promptId}`, {
+      method: "POST",
+      body: payload,
+    });
+  },
+
+  createForPrompt(promptId, payload) {
+    return apiRequest(`/api/prompts/${promptId}/report`, {
       method: "POST",
       body: payload,
     });

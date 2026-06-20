@@ -45,6 +45,13 @@ export const promptUsageSteps = [
   },
 ];
 
+const whyPromptWorksFallback = [
+  "Well-structured for clear output",
+  "Includes analysis and explanation",
+  "Works on complex codebases",
+  "Saves time and improves quality",
+];
+
 function toTitleCase(value) {
   if (!value) {
     return "";
@@ -85,6 +92,24 @@ function buildCreatorBio(prompt) {
   }
 
   return "AI enthusiast and prompt creator focused on practical, high-quality workflows.";
+}
+
+function getPromptWhyWorks(prompt) {
+  const candidate =
+    prompt?.whyThisWorks ||
+    prompt?.whyItWorks ||
+    prompt?.tips ||
+    prompt?.benefits ||
+    prompt?.highlights ||
+    [];
+
+  if (Array.isArray(candidate) && candidate.length > 0) {
+    return candidate
+      .map((item) => toTitleCase(typeof item === "string" ? item : item?.label || item?.title || ""))
+      .filter(Boolean);
+  }
+
+  return whyPromptWorksFallback;
 }
 
 function getPromptItem(payload) {
@@ -149,12 +174,20 @@ export function normalizePromptDetails(payload) {
       id: prompt?.creator?._id || prompt?.creatorId || "",
       name: creatorName,
       email: creatorEmail,
+      image:
+        prompt?.creator?.image ||
+        prompt?.creator?.picture ||
+        prompt?.creator?.avatar ||
+        prompt?.creatorImage ||
+        prompt?.author?.image ||
+        "",
       bio: buildCreatorBio(prompt),
       initials: buildInitials(creatorName),
       totalPrompts,
       totalCopies,
       averageRating: creatorAverageRating,
     },
+    whyThisWorks: getPromptWhyWorks(prompt),
   };
 }
 
@@ -202,6 +235,12 @@ export function normalizeReviewsPayload(payload) {
         review?.review ||
         review?.description ||
         "Helpful review feedback from the PromptFlow community.",
+      image:
+        review?.user?.image ||
+        review?.user?.picture ||
+        review?.author?.image ||
+        review?.reviewerImage ||
+        "",
       createdAt: review?.createdAt || review?.date,
       updatedAt: review?.updatedAt || review?.createdAt || review?.date,
       initials: buildInitials(authorName),
@@ -227,4 +266,3 @@ export function normalizeReviewsPayload(payload) {
     distribution,
   };
 }
-

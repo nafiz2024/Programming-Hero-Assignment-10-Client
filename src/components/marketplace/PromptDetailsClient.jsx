@@ -28,9 +28,11 @@ import { MotionStagger, MotionStaggerItem } from "@/components/shared/MotionStag
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ErrorState from "@/components/ui/ErrorState";
+import PromptCard from "@/components/marketplace/PromptCard";
 import PromptDetailsSkeleton from "@/components/marketplace/PromptDetailsSkeleton";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
 import SelectField from "@/components/ui/SelectField";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import { bookmarkApi, promptApi, reportApi, reviewApi } from "@/lib/api";
 import { formatCompactNumber } from "@/lib/marketplace";
@@ -77,6 +79,55 @@ function MetaStat({ icon: Icon, label, value }) {
       <Icon className="h-4 w-4 text-primary" />
       <span>{value}</span>
       <span className="text-muted/70">{label}</span>
+    </div>
+  );
+}
+
+function PromptContentRenderer({ content }) {
+  const segments = String(content || "")
+    .split(/```/)
+    .map((segment, index) => ({
+      id: `segment-${index}`,
+      type: index % 2 === 1 ? "code" : "text",
+      value: segment,
+    }));
+
+  return (
+    <div className="space-y-4">
+      {segments.map((segment) =>
+        segment.type === "code" ? (
+          <pre
+            key={segment.id}
+            className="overflow-x-auto rounded-xl border border-white/8 bg-[#060d1d] px-4 py-4 font-mono text-[13px] leading-7 text-slate-100"
+          >
+            <code>{segment.value.replace(/^\w+\n/, "")}</code>
+          </pre>
+        ) : (
+          <div key={segment.id} className="space-y-3">
+            {segment.value.split("\n").map((line, lineIndex) => {
+              const trimmed = line.trim();
+
+              if (!trimmed) {
+                return null;
+              }
+
+              if (/^#{1,3}\s/.test(trimmed)) {
+                return (
+                  <h3 key={`${segment.id}-${lineIndex}`} className="text-base font-semibold text-white">
+                    {trimmed.replace(/^#{1,3}\s/, "")}
+                  </h3>
+                );
+              }
+
+              return (
+                <p key={`${segment.id}-${lineIndex}`} className="font-mono text-[13px] leading-7 text-slate-100">
+                  {trimmed}
+                </p>
+              );
+            })}
+          </div>
+        ),
+      )}
     </div>
   );
 }
@@ -131,9 +182,12 @@ function ReviewCard({ review }) {
     <article className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-gradient text-body-sm font-semibold text-white shadow-glow">
-            {review.initials}
-          </div>
+          <UserAvatar
+            alt={review.authorName}
+            className="h-12 w-12 bg-brand-gradient text-body-sm font-semibold text-white shadow-glow"
+            fallback={review.initials}
+            src={review.image}
+          />
           <div className="space-y-1">
             <p className="text-body font-medium text-foreground">{review.authorName}</p>
             <p className="text-body-xs text-muted">{formatDate(review.createdAt)}</p>
@@ -194,6 +248,12 @@ export default function PromptDetailsClient({ promptId }) {
     reason: reportReasonOptions[0],
     description: "",
   });
+  const [relatedState, setRelatedState] = useState({
+    status: "loading",
+    items: [],
+    error: "",
+  });
+  const [visibleReviews, setVisibleReviews] = useState(3);
 
   async function loadPrompt() {
     setPromptState((currentState) => ({
@@ -302,6 +362,81 @@ export default function PromptDetailsClient({ promptId }) {
   useEffect(() => {
     let isMounted = true;
 
+    async function loadRelatedPrompts() {
+      try {
+        const response = await promptApi.getAll();
+        const items = Array.isArray(response?.prompts)
+          ? response.prompts
+          : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response)
+          ? response
+          : [];
+        const accents = [
+          "from-sky-500/30 via-cyan-500/12 to-transparent",
+          "from-fuchsia-500/28 via-violet-500/12 to-transparent",
+          "from-indigo-500/30 via-blue-500/10 to-transparent",
+          "from-pink-500/28 via-orange-500/12 to-transparent",
+          "from-amber-500/28 via-orange-500/12 to-transparent",
+          "from-cyan-500/26 via-sky-500/12 to-transparent",
+        ];
+
+        const related = items
+          .filter((item) => String(item?._id || item?.id) !== String(promptId))
+          .map((item, index) => ({
+            id: item?._id || item?.id || `related-${index}`,
+            title: item?.title || "Prompt",
+            category: item?.category?.name || item?.categoryName || item?.category || "General",
+            aiTool: item?.aiTool || item?.model || item?.tool || "ChatGPT",
+            difficulty: item?.difficulty || item?.level || "Beginner",
+            visibility: String(item?.visibility || "public").toLowerCase().includes("private") ? "Premium" : "Public",
+            accent: accents[index % accents.length],
+            rating: Number(item?.rating || item?.averageRating || 4.8),
+            copyCount: Number(item?.copyCount || item?.copies || 0),
+            author: item?.creatorName || item?.creator?.name || item?.author?.name || "PromptFlow Creator",
+            description: item?.description || item?.summary || "Related prompt from the PromptFlow marketplace.",
+          }))
+          .sort((left, right) => {
+            const leftScore =
+              (left.category === prompt?.category ? 2 : 0) +
+              (left.aiTool === prompt?.aiTool ? 1 : 0) +
+              left.rating / 10;
+            const rightScore =
+              (right.category === prompt?.category ? 2 : 0) +
+              (right.aiTool === prompt?.aiTool ? 1 : 0) +
+              right.rating / 10;
+            return rightScore - leftScore;
+          })
+          .slice(0, 6);
+
+        if (isMounted) {
+          setRelatedState({
+            status: "success",
+            items: related,
+            error: "",
+          });
+        }
+      } catch (error) {
+        if (isMounted) {
+          setRelatedState({
+            status: "error",
+            items: [],
+            error: error.message || "Unable to load related prompts.",
+          });
+        }
+      }
+    }
+
+    loadRelatedPrompts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [prompt?.aiTool, prompt?.category, promptId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
     async function loadBookmarks() {
       if (authLoading) {
         return;
@@ -365,7 +500,7 @@ export default function PromptDetailsClient({ promptId }) {
 
     try {
       await navigator.clipboard.writeText(prompt.content);
-      await promptApi.copy(prompt.id);
+      await promptApi.copyPublic(prompt.id);
 
       setPromptState((currentState) => ({
         ...currentState,
@@ -395,12 +530,18 @@ export default function PromptDetailsClient({ promptId }) {
     }
 
     setActionState((currentState) => ({ ...currentState, bookmark: true }));
+    const nextValue = !isBookmarked;
+    setIsBookmarked(nextValue);
 
     try {
-      await bookmarkApi.toggle(prompt.id, isBookmarked);
-      setIsBookmarked((currentValue) => !currentValue);
+      if (isBookmarked) {
+        await promptApi.unbookmark(prompt.id);
+      } else {
+        await promptApi.bookmark(prompt.id);
+      }
       toastSuccess(isBookmarked ? "Bookmark removed" : "Prompt bookmarked");
     } catch (error) {
+      setIsBookmarked(!nextValue);
       toastError(error.message || "Unable to update your bookmark.");
     } finally {
       setActionState((currentState) => ({ ...currentState, bookmark: false }));
@@ -449,7 +590,8 @@ export default function PromptDetailsClient({ promptId }) {
     setActionState((currentState) => ({ ...currentState, review: true }));
 
     try {
-      await reviewApi.createOrUpdate(promptId, {
+      await reviewApi.create({
+        promptId,
         rating: Number(reviewForm.rating),
         comment: reviewForm.comment.trim(),
       });
@@ -477,7 +619,7 @@ export default function PromptDetailsClient({ promptId }) {
     setActionState((currentState) => ({ ...currentState, report: true }));
 
     try {
-      await reportApi.create(promptId, {
+      await reportApi.createForPrompt(promptId, {
         reason: reportForm.reason,
         description: reportForm.description.trim(),
       });
@@ -523,6 +665,8 @@ export default function PromptDetailsClient({ promptId }) {
               </Link>
               <ChevronRight className="h-3.5 w-3.5" />
               <span>{prompt.category}</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span>{prompt.aiTool}</span>
               <ChevronRight className="h-3.5 w-3.5" />
               <span className="text-foreground">{prompt.title}</span>
             </div>
@@ -640,14 +784,14 @@ export default function PromptDetailsClient({ promptId }) {
                       PromptFlow prompt
                     </span>
                   </div>
-                  <pre
+                  <div
                     className={clsx(
                       "overflow-x-auto whitespace-pre-wrap px-4 py-5 font-mono text-[13px] leading-7 text-slate-100 md:px-5 md:text-sm",
                       prompt.locked ? "blur-md select-none" : "",
                     )}
                   >
-                    {prompt.content}
-                  </pre>
+                    <PromptContentRenderer content={prompt.content} />
+                  </div>
 
                   {prompt.locked ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-background/60 p-6 backdrop-blur-md">
@@ -685,9 +829,12 @@ export default function PromptDetailsClient({ promptId }) {
               <section className="pf-card rounded-xl p-5 md:p-6">
                 <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient text-body font-semibold text-white shadow-glow">
-                      {prompt.creator.initials}
-                    </div>
+                    <UserAvatar
+                      alt={prompt.creator.name}
+                      className="h-16 w-16 bg-brand-gradient text-body font-semibold text-white shadow-glow"
+                      fallback={prompt.creator.initials}
+                      src={prompt.creator.image}
+                    />
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-3">
                         <h2 className="text-h2">{prompt.creator.name}</h2>
@@ -723,6 +870,31 @@ export default function PromptDetailsClient({ promptId }) {
                     <p className="text-body-xs uppercase tracking-[0.18em] text-muted">Average Rating</p>
                     <p className="mt-3 text-h2">{prompt.creator.averageRating.toFixed(1)}</p>
                   </div>
+                </div>
+              </section>
+            </MotionReveal>
+
+            <MotionReveal preset="viewportReveal">
+              <section className="pf-card rounded-xl p-5 md:p-6">
+                <div className="mb-5">
+                  <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">Why This Prompt Works</p>
+                  <h2 className="mt-2 text-h2">What makes this prompt effective</h2>
+                </div>
+                <div className="grid gap-3">
+                  {prompt.whyThisWorks?.length > 0 ? (
+                    prompt.whyThisWorks.map((reason) => (
+                      <div key={reason} className="inline-flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 text-body-sm text-foreground">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-success/14 text-success">
+                          <Check className="h-4 w-4" />
+                        </span>
+                        <span>{reason}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-body-sm text-muted">
+                      No extra prompt guidance was provided for this submission yet.
+                    </div>
+                  )}
                 </div>
               </section>
             </MotionReveal>
@@ -833,11 +1005,49 @@ export default function PromptDetailsClient({ promptId }) {
                       </div>
                     ) : null}
 
-                    {reviewState.items.map((review) => (
+                    {reviewState.items.slice(0, visibleReviews).map((review) => (
                       <ReviewCard key={review.id} review={review} />
                     ))}
+
+                    {reviewState.items.length > visibleReviews ? (
+                      <Button
+                        className="w-full"
+                        onPress={() => setVisibleReviews((currentValue) => currentValue + 3)}
+                        size="lg"
+                        variant="secondary"
+                      >
+                        Load More Reviews
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
+              </section>
+            </MotionReveal>
+
+            <MotionReveal preset="viewportReveal">
+              <section className="pf-card rounded-xl p-5 md:p-6">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">Related Prompts</p>
+                    <h2 className="mt-2 text-h2">More prompts you may like</h2>
+                  </div>
+                  <Link className="text-body-sm font-semibold text-primary transition hover:text-secondary" href="/prompts">
+                    Explore all
+                  </Link>
+                </div>
+
+                {relatedState.status === "error" ? (
+                  <ErrorState
+                    description={relatedState.error || "Unable to load related prompts."}
+                    title="Unable to load related prompts"
+                  />
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {relatedState.items.map((relatedPrompt) => (
+                      <PromptCard key={relatedPrompt.id} {...relatedPrompt} />
+                    ))}
+                  </div>
+                )}
               </section>
             </MotionReveal>
           </div>
@@ -847,9 +1057,12 @@ export default function PromptDetailsClient({ promptId }) {
               <aside className="pf-card rounded-xl p-5">
                 <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">About the Creator</p>
                 <div className="mt-4 flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient text-body font-semibold text-white shadow-glow">
-                    {prompt.creator.initials}
-                  </div>
+                  <UserAvatar
+                    alt={prompt.creator.name}
+                    className="h-16 w-16 bg-brand-gradient text-body font-semibold text-white shadow-glow"
+                    fallback={prompt.creator.initials}
+                    src={prompt.creator.image}
+                  />
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-3">
                       <h2 className="text-h3">{prompt.creator.name}</h2>
