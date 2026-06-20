@@ -7,20 +7,26 @@ export default function SectionHeader({
   action,
   className,
   icon: Icon = ChevronRight,
+  eyebrow,
 }) {
   return (
     <div
       className={clsx(
-        "flex flex-col gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between",
+        "pf-card flex flex-col gap-4 rounded-lg p-5 md:flex-row md:items-end md:justify-between md:p-6",
         className,
       )}
     >
       <div className="space-y-2">
-        <div className="flex items-center gap-2 text-slate-900">
-          <Icon className="h-5 w-5 text-blue-600" />
-          <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+        {eyebrow ? (
+          <p className="text-body-xs font-semibold uppercase tracking-[0.24em] text-primary">{eyebrow}</p>
+        ) : null}
+        <div className="flex items-center gap-3 text-foreground">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-primary/12 text-primary shadow-glow">
+            <Icon className="h-5 w-5" />
+          </div>
+          <h2 className="text-h2">{title}</h2>
         </div>
-        {description ? <p className="max-w-2xl text-sm text-slate-500">{description}</p> : null}
+        {description ? <p className="max-w-2xl text-body-sm text-muted md:text-body">{description}</p> : null}
       </div>
       {action ? <div>{action}</div> : null}
     </div>

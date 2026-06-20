@@ -3,13 +3,41 @@
 @tailwind utilities;
 
 :root {
-  --pf-primary: #2563eb;
-  --pf-secondary: #14b8a6;
-  --pf-success: #16a34a;
-  --pf-warning: #f59e0b;
-  --pf-danger: #dc2626;
-  --pf-background: #f8fafc;
-  --pf-foreground: #0f172a;
+  --pf-color-background: 6 10 24;
+  --pf-color-background-alt: 11 16 35;
+  --pf-color-surface: 15 23 42;
+  --pf-color-card: 18 28 48;
+  --pf-color-card-strong: 24 35 58;
+  --pf-color-border: 72 88 122;
+  --pf-color-foreground: 243 247 255;
+  --pf-color-muted: 154 166 192;
+  --pf-color-primary: 139 92 246;
+  --pf-color-secondary: 96 165 250;
+  --pf-color-success: 74 222 128;
+  --pf-color-warning: 250 204 21;
+  --pf-color-danger: 248 113 113;
+  --pf-space-1: 4px;
+  --pf-space-2: 8px;
+  --pf-space-3: 12px;
+  --pf-space-4: 16px;
+  --pf-space-5: 24px;
+  --pf-space-6: 32px;
+  --pf-space-7: 48px;
+  --pf-space-8: 64px;
+  --pf-radius-sm: 14px;
+  --pf-radius-md: 18px;
+  --pf-radius-lg: 24px;
+  --pf-radius-xl: 30px;
+  --pf-radius-pill: 9999px;
+  --pf-shadow-card: 0 20px 60px rgba(2, 6, 23, 0.38);
+  --pf-shadow-glow: 0 0 0 1px rgba(139, 92, 246, 0.1), 0 20px 60px rgba(96, 165, 250, 0.18);
+  --pf-shadow-modal: 0 36px 120px rgba(2, 6, 23, 0.55);
+  --pf-gradient-brand: linear-gradient(135deg, rgb(139 92 246) 0%, rgb(96 165 250) 52%, rgb(56 189 248) 100%);
+  --pf-gradient-surface: linear-gradient(180deg, rgba(18, 28, 48, 0.92) 0%, rgba(11, 17, 34, 0.98) 100%);
+  --pf-gradient-glass: linear-gradient(135deg, rgba(139, 92, 246, 0.18) 0%, rgba(96, 165, 250, 0.06) 48%, rgba(10, 15, 30, 0.5) 100%);
+  --pf-gradient-page: radial-gradient(circle at top left, rgba(139, 92, 246, 0.22), transparent 26%),
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.14), transparent 24%),
+    linear-gradient(180deg, #050816 0%, #080d1f 45%, #060a18 100%);
 }
 
 html,
@@ -17,13 +45,148 @@ body {
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  background-color: var(--pf-background);
-  color: var(--pf-foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--pf-gradient-page);
+  color: rgb(var(--pf-color-foreground));
 }
 
 * {
   box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background-color: rgba(139, 92, 246, 0.3);
+}
+
+@layer base {
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary/70 ring-offset-2 ring-offset-background;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-tight text-foreground;
+  }
+
+  p {
+    @apply text-muted;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(11, 16, 35, 0.92);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(72, 88, 122, 0.72);
+    border: 2px solid rgba(11, 16, 35, 0.92);
+    border-radius: 9999px;
+  }
+}
+
+@layer components {
+  .pf-glass {
+    background:
+      var(--pf-gradient-glass),
+      rgba(15, 23, 42, 0.76);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    box-shadow: var(--pf-shadow-card);
+    backdrop-filter: blur(24px);
+  }
+
+  .pf-card {
+    @apply pf-glass rounded-lg;
+  }
+
+  .pf-panel {
+    background: var(--pf-gradient-surface);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    box-shadow: var(--pf-shadow-card);
+  }
+
+  .pf-touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .pf-shimmer {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.72) 0%, rgba(17, 24, 39, 0.86) 100%);
+  }
+
+  .pf-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+    animation: pf-shimmer 1.8s infinite;
+  }
+
+  .pf-safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
+
+  .pf-mobile-sheet {
+    @apply fixed inset-x-0 bottom-0 rounded-t-[28px] border border-white/10 bg-background-alt/95 shadow-modal backdrop-blur-2xl;
+  }
+
+  .pf-table-scroll {
+    @apply overflow-x-auto;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .desktop-only {
+    @apply hidden desktop:block;
+  }
+
+  .tablet-only {
+    @apply hidden md:block desktop:hidden;
+  }
+
+  .mobile-only {
+    @apply md:hidden;
+  }
+
+  .responsive-shell-grid {
+    @apply grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 desktop:grid-cols-3 desktop:gap-6;
+  }
+
+  .responsive-table {
+    @apply overflow-x-auto rounded-lg;
+  }
+}
+
+@keyframes pf-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }

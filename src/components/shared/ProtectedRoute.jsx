@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+import GlobalLoader from "@/components/ui/GlobalLoader";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function ProtectedRoute({ children }) {
@@ -16,7 +17,7 @@ export default function ProtectedRoute({ children }) {
   }, [isAuthenticated, loading, router]);
 
   if (loading) {
-    return <p>Loading...</p>;
+    return <GlobalLoader label="Authenticating" />;
   }
 
   if (!isAuthenticated) {

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+import GlobalLoader from "@/components/ui/GlobalLoader";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function RoleRoute({ allowedRoles = [], children }) {
@@ -27,7 +28,7 @@ export default function RoleRoute({ allowedRoles = [], children }) {
   }, [isAllowed, isAuthenticated, loading, router]);
 
   if (loading) {
-    return <p>Loading...</p>;
+    return <GlobalLoader label="Checking access" />;
   }
 
   if (!isAuthenticated || !isAllowed) {

@@ -1,20 +1,30 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
+
+import { motionPresets } from "@/lib/motion";
 
 export default function FadeIn({
   children,
   className,
   delay = 0,
-  duration = 0.35,
-  y = 16,
+  duration,
 }) {
+  const shouldReduceMotion = useReducedMotion();
+  const preset = shouldReduceMotion ? motionPresets.reduced : motionPresets.contentFade;
+
   return (
     <motion.div
-      animate={{ opacity: 1, y: 0 }}
+      animate="visible"
       className={className}
-      initial={{ opacity: 0, y }}
-      transition={{ duration, delay, ease: "easeOut" }}
+      initial="hidden"
+      transition={{
+        ...preset.transition,
+        delay,
+        duration: duration ?? preset.transition.duration,
+      }}
+      variants={preset.variants}
     >
       {children}
     </motion.div>
