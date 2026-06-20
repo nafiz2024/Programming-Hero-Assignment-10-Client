@@ -108,7 +108,7 @@ export default function DashboardSidebar({ onNavigate }) {
               alt={user?.name || "PromptFlow User"}
               className="h-12 w-12 bg-brand-gradient text-sm text-white"
               fallback={user?.initials || "PF"}
-              src={user?.image || user?.photo}
+              src={user?.image || user?.picture || user?.photoURL || user?.avatar || user?.photo}
             />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-950">{user?.name || "PromptFlow User"}</p>

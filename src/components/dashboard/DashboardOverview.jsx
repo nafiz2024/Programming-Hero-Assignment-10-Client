@@ -10,6 +10,7 @@ import Button from "@/components/ui/Button";
 import DashboardSkeleton from "@/components/ui/DashboardSkeleton";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useDashboard } from "@/hooks/useDashboard";
 import { formatDashboardDate } from "@/lib/dashboard";
 import { formatCompactNumber } from "@/lib/marketplace";
@@ -117,14 +118,12 @@ export default function DashboardOverview() {
         <div className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,rgba(139,92,246,0.92),rgba(99,102,241,0.88),rgba(56,189,248,0.82))] p-6 text-white shadow-[0_26px_70px_rgba(99,102,241,0.24)] md:p-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white/70 bg-white/15 text-2xl font-semibold shadow-lg">
-                {user.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img alt={user.name} className="h-full w-full rounded-full object-cover" src={user.image} />
-                ) : (
-                  user.initials
-                )}
-              </div>
+              <UserAvatar
+                alt={user.name}
+                className="h-24 w-24 border-4 border-white/70 bg-white/15 text-2xl font-semibold text-white shadow-lg"
+                fallback={user.initials}
+                src={user.image || user.picture || user.photoURL || user.avatar || user.photo}
+              />
               <div>
                 <h2 className="text-3xl font-semibold tracking-tight">{user.name}</h2>
                 <p className="mt-2 text-base text-white/85">{user.email}</p>

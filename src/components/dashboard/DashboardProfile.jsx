@@ -69,7 +69,7 @@ export default function DashboardProfile() {
                     alt={user.name}
                     className="h-28 w-28 border-4 border-white/70 bg-white/15 text-3xl text-white shadow-lg"
                     fallback={user.initials}
-                    src={user.image || user.photo}
+                    src={user.image || user.picture || user.photoURL || user.avatar || user.photo}
                   />
                   <button
                     className="absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center rounded-full border border-white/80 bg-white text-slate-900 shadow-md"

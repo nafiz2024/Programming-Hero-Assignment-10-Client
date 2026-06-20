@@ -36,6 +36,22 @@ export const registerSchema = z
     path: ["confirmPassword"],
   });
 
+export function getUserImageSrc(user) {
+  if (!user || typeof user !== "object") {
+    return "";
+  }
+
+  return (
+    user.image ||
+    user.picture ||
+    user.photoURL ||
+    user.avatar ||
+    user.photo ||
+    user.profileImage ||
+    ""
+  );
+}
+
 export function normalizeAuthUser(payload) {
   if (!payload) {
     return null;
@@ -56,6 +72,11 @@ export function normalizeAuthUser(payload) {
   return {
     ...candidate,
     id: candidate.id || candidate._id || "",
+    image: getUserImageSrc(candidate),
+    picture: candidate.picture || candidate.image || "",
+    photoURL: candidate.photoURL || candidate.picture || candidate.image || "",
+    avatar: candidate.avatar || candidate.picture || candidate.image || "",
+    photo: candidate.photo || candidate.picture || candidate.image || "",
     role: candidate.role || "user",
     subscription: candidate.subscription || "free",
   };

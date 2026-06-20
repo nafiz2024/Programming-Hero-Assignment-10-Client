@@ -1,4 +1,5 @@
 import { formatCompactNumber, normalizePromptPayload } from "@/lib/marketplace";
+import { getUserImageSrc } from "@/lib/auth";
 
 const PROFILE_STORAGE_KEY = "pf-dashboard-profile";
 const REVIEWS_STORAGE_KEY = "pf-dashboard-reviews";
@@ -62,6 +63,7 @@ export function normalizeDashboardUser(payload, profileOverrides = {}) {
   const baseName = profileOverrides.name || user.name || "PromptFlow User";
   const createdAt = user.createdAt || new Date().toISOString();
   const updatedAt = user.updatedAt || createdAt;
+  const resolvedImage = profileOverrides.image || getUserImageSrc(user);
 
   return {
     id: user.id || user._id || "",
@@ -75,8 +77,11 @@ export function normalizeDashboardUser(payload, profileOverrides = {}) {
       profileOverrides.bio ||
       user.bio ||
       "PromptFlow member exploring, saving, and refining high-quality prompts for better outcomes.",
-    image: profileOverrides.image || user.image || user.photo || "",
-    photo: profileOverrides.image || user.photo || user.image || "",
+    image: resolvedImage,
+    picture: user.picture || user.image || user.photo || "",
+    photoURL: user.photoURL || user.picture || user.image || "",
+    avatar: user.avatar || user.picture || user.image || "",
+    photo: user.photo || user.picture || user.image || "",
     initials: baseName
       .split(" ")
       .filter(Boolean)

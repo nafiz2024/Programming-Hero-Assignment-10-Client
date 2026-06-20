@@ -72,7 +72,7 @@ export default function DashboardShell({ children }) {
                   alt={user?.name || "PromptFlow User"}
                   className="h-10 w-10 bg-brand-gradient text-xs text-white"
                   fallback={user?.initials || "PF"}
-                  src={user?.image || user?.photo}
+                  src={user?.image || user?.picture || user?.photoURL || user?.avatar || user?.photo}
                 />
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold text-slate-900">{user?.name || "PromptFlow User"}</p>
