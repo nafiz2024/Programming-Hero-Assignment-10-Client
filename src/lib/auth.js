@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.VITE_API_URL ||
+  ""
+).replace(/\/$/, "");
 
 export const loginSchema = z.object({
   email: z.email("Please enter a valid email address."),
@@ -117,4 +121,17 @@ export function getGoogleSocialPayload(pathname) {
     callbackURL: buildSocialCallbackUrl(callbackPath),
     errorCallbackURL: buildSocialCallbackUrl(errorPath),
   };
+}
+
+export function getGoogleSocialRedirectUrl(pathname) {
+  if (!API_BASE_URL) {
+    throw new Error("API URL is not configured.");
+  }
+
+  const callbackUrl = encodeURIComponent(buildSocialCallbackUrl(`${pathname}?social=google`));
+  const errorCallbackUrl = encodeURIComponent(
+    buildSocialCallbackUrl(`${pathname}?social=google-error`),
+  );
+
+  return `${API_BASE_URL}/api/auth/sign-in/social?provider=google&callbackURL=${callbackUrl}&errorCallbackURL=${errorCallbackUrl}`;
 }

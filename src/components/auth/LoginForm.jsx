@@ -10,8 +10,7 @@ import { useForm } from "react-hook-form";
 import MotionReveal from "@/components/shared/MotionReveal";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
-import { authApi } from "@/lib/api";
-import { getGoogleSocialPayload, getPostAuthRedirect, loginSchema } from "@/lib/auth";
+import { getGoogleSocialRedirectUrl, getPostAuthRedirect, loginSchema } from "@/lib/auth";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
 import AuthField from "@/components/auth/AuthField";
 
@@ -96,21 +95,14 @@ export default function LoginForm({ socialStatus }) {
     }
   }
 
-  async function handleGoogleSignIn() {
+  function handleGoogleSignIn() {
     setIsGoogleLoading(true);
 
     try {
-      const socialResponse = await authApi.signInSocial(getGoogleSocialPayload("/login"));
-      const redirectUrl = socialResponse?.url;
-
-      if (!redirectUrl) {
-        throw new Error("Google sign-in URL was not returned by the server.");
-      }
-
-      window.location.assign(redirectUrl);
+      window.location.href = getGoogleSocialRedirectUrl("/login");
     } catch (error) {
       setIsGoogleLoading(false);
-      toastError(error.message || "Unable to start Google login.");
+      toastError(error.message || "API URL is not configured.");
     }
   }
 
