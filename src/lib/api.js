@@ -182,6 +182,13 @@ export const bookmarkApi = {
     });
   },
 
+  create(payload) {
+    return apiRequest("/api/bookmarks", {
+      method: "POST",
+      body: payload,
+    });
+  },
+
   getAll() {
     return apiRequest("/api/bookmarks");
   },
