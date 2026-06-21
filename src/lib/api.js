@@ -224,6 +224,13 @@ export const reviewApi = {
       method: "DELETE",
     });
   },
+
+  removeForPrompt(promptId, payload = {}) {
+    return apiRequest(`/api/reviews/${promptId}`, {
+      method: "DELETE",
+      body: payload,
+    });
+  },
 };
 
 export const paymentApi = {

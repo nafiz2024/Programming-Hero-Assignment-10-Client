@@ -223,6 +223,14 @@ export function normalizeReviewsPayload(payload) {
 
     return {
       id: review?._id || review?.id || `review-${index}`,
+      authorId:
+        review?.user?._id ||
+        review?.user?.id ||
+        review?.author?._id ||
+        review?.author?.id ||
+        review?.userId ||
+        review?.reviewerId ||
+        "",
       authorName,
       authorEmail:
         review?.user?.email ||

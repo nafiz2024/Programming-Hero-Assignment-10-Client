@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark,
   Bot,
@@ -25,6 +25,9 @@ import clsx from "clsx";
 
 import MotionReveal from "@/components/shared/MotionReveal";
 import { MotionStagger, MotionStaggerItem } from "@/components/shared/MotionStagger";
+import ReviewForm from "@/components/reviews/ReviewForm";
+import ReviewList from "@/components/reviews/ReviewList";
+import RatingSummary from "@/components/reviews/RatingSummary";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ErrorState from "@/components/ui/ErrorState";
@@ -144,65 +147,6 @@ function DetailRow({ icon: Icon, label, value }) {
   );
 }
 
-function RatingStars({ rating = 0, size = "sm" }) {
-  const rounded = Math.round(rating);
-  const sizeClass = size === "lg" ? "h-5 w-5" : "h-4 w-4";
-
-  return (
-    <div className="flex items-center gap-1 text-warning">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <Star
-          key={`star-${index}`}
-          className={clsx(sizeClass, index < rounded ? "fill-current" : "text-white/15")}
-        />
-      ))}
-    </div>
-  );
-}
-
-function RatingBar({ count, star, totalReviews }) {
-  const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
-
-  return (
-    <div className="grid grid-cols-[52px_minmax(0,1fr)_64px] items-center gap-3 text-body-sm text-muted">
-      <span>{star} star</span>
-      <div className="h-2 rounded-full bg-white/[0.06]">
-        <div
-          className="h-full rounded-full bg-brand-gradient"
-          style={{ width: `${Math.max(percentage, count > 0 ? 6 : 0)}%` }}
-        />
-      </div>
-      <span className="text-right">{count}</span>
-    </div>
-  );
-}
-
-function ReviewCard({ review }) {
-  return (
-    <article className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <UserAvatar
-            alt={review.authorName}
-            className="h-12 w-12 bg-brand-gradient text-body-sm font-semibold text-white shadow-glow"
-            fallback={review.initials}
-            src={review.image}
-          />
-          <div className="space-y-1">
-            <p className="text-body font-medium text-foreground">{review.authorName}</p>
-            <p className="text-body-xs text-muted">{formatDate(review.createdAt)}</p>
-          </div>
-        </div>
-        <div className="space-y-2 text-right">
-          <RatingStars rating={review.rating} />
-          <p className="text-body-xs text-muted">{review.rating.toFixed(1)} / 5</p>
-        </div>
-      </div>
-      <p className="text-body-sm leading-7 text-muted">{review.comment}</p>
-    </article>
-  );
-}
-
 function UsageCard({ index, title, description }) {
   return (
     <div className="pf-card rounded-xl p-4">
@@ -216,7 +160,7 @@ function UsageCard({ index, title, description }) {
 }
 
 export default function PromptDetailsClient({ promptId }) {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, user } = useAuth();
   const [promptState, setPromptState] = useState({
     status: "loading",
     item: null,
@@ -239,10 +183,7 @@ export default function PromptDetailsClient({ promptId }) {
     bookmark: false,
     review: false,
     report: false,
-  });
-  const [reviewForm, setReviewForm] = useState({
-    rating: 5,
-    comment: "",
+    deleteReview: false,
   });
   const [reportForm, setReportForm] = useState({
     reason: reportReasonOptions[0],
@@ -254,6 +195,8 @@ export default function PromptDetailsClient({ promptId }) {
     error: "",
   });
   const [visibleReviews, setVisibleReviews] = useState(3);
+  const [pendingReviewDeletion, setPendingReviewDeletion] = useState(null);
+  const reviewFormRef = useRef(null);
   const prompt = promptState.item;
 
   async function loadPrompt() {
@@ -484,6 +427,14 @@ export default function PromptDetailsClient({ promptId }) {
     }),
     [prompt?.rating, prompt?.reviewCount, reviewState],
   );
+  const currentUserReview =
+    reviewState.items.find(
+      (review) =>
+        (user?.id && review.authorId && String(user.id) === String(review.authorId)) ||
+        (user?.email &&
+          review.authorEmail &&
+          String(user.email).toLowerCase() === String(review.authorEmail).toLowerCase()),
+    ) || null;
 
   async function handleCopy() {
     if (!prompt || prompt.locked) {
@@ -574,37 +525,46 @@ export default function PromptDetailsClient({ promptId }) {
     }
   }
 
-  async function handleReviewSubmit(event) {
-    event.preventDefault();
-
+  async function handleReviewSubmit(values) {
     if (!isAuthenticated) {
       toastWarning("Please log in to submit a review.");
-      return;
-    }
-
-    if (!reviewForm.rating) {
-      toastWarning("Please choose a rating before submitting.");
       return;
     }
 
     setActionState((currentState) => ({ ...currentState, review: true }));
 
     try {
-      await reviewApi.create({
-        promptId,
-        rating: Number(reviewForm.rating),
-        comment: reviewForm.comment.trim(),
+      await reviewApi.createOrUpdate(promptId, {
+        rating: Number(values.rating),
+        comment: values.comment.trim(),
       });
       await loadReviews();
-      setReviewForm({
-        rating: Number(reviewForm.rating),
-        comment: "",
-      });
-      toastSuccess("Review submitted");
+      toastSuccess(currentUserReview ? "Review updated" : "Review submitted");
     } catch (error) {
       toastError(error.message || "Unable to submit your review.");
     } finally {
       setActionState((currentState) => ({ ...currentState, review: false }));
+    }
+  }
+
+  async function handleReviewDelete() {
+    if (!pendingReviewDeletion) {
+      return;
+    }
+
+    setActionState((currentState) => ({ ...currentState, deleteReview: true }));
+
+    try {
+      await reviewApi.removeForPrompt(promptId, {
+        reviewId: pendingReviewDeletion.id,
+      });
+      await loadReviews();
+      setPendingReviewDeletion(null);
+      toastSuccess("Review deleted");
+    } catch (error) {
+      toastError(error.message || "Unable to delete this review.");
+    } finally {
+      setActionState((currentState) => ({ ...currentState, deleteReview: false }));
     }
   }
 
@@ -914,112 +874,42 @@ export default function PromptDetailsClient({ promptId }) {
 
                 <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
                   <div className="space-y-5">
-                    <div className="rounded-xl border border-white/8 bg-white/[0.03] p-5">
-                      <p className="text-display-sm">
-                        {reviewSummary.averageRating > 0 ? reviewSummary.averageRating.toFixed(1) : "0.0"}
-                      </p>
-                      <div className="mt-3">
-                        <RatingStars rating={reviewSummary.averageRating} size="lg" />
-                      </div>
-                      <p className="mt-3 text-body-sm text-muted">
-                        {reviewSummary.totalReviews > 0
-                          ? `${reviewSummary.totalReviews} total reviews`
-                          : "No reviews yet. Be the first to share feedback."}
-                      </p>
+                    <RatingSummary
+                      averageRating={reviewSummary.averageRating}
+                      distribution={reviewSummary.distribution}
+                      totalReviews={reviewSummary.totalReviews}
+                    />
 
-                      <div className="mt-5 space-y-3">
-                        {reviewSummary.distribution.map((entry) => (
-                          <RatingBar
-                            key={entry.star}
-                            count={entry.count}
-                            star={entry.star}
-                            totalReviews={Math.max(reviewSummary.totalReviews, 1)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <form className="rounded-xl border border-white/8 bg-white/[0.03] p-5" onSubmit={handleReviewSubmit}>
-                      <div className="space-y-2">
-                        <h3 className="text-h3">Write a review</h3>
-                        <p className="text-body-sm text-muted">Share your experience to help other buyers.</p>
-                      </div>
-
-                      <div className="mt-4 flex gap-2">
-                        {Array.from({ length: 5 }).map((_, index) => {
-                          const value = index + 1;
-
-                          return (
-                            <button
-                              key={`review-star-${value}`}
-                              aria-label={`Rate ${value} stars`}
-                              className="pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-warning transition hover:border-primary/30"
-                              onClick={() => setReviewForm((currentState) => ({ ...currentState, rating: value }))}
-                              type="button"
-                            >
-                              <Star className={clsx("h-5 w-5", reviewForm.rating >= value ? "fill-current" : "")} />
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition focus-within:border-primary/50 focus-within:shadow-glow">
-                        <textarea
-                          className="min-h-[120px] w-full resize-none bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted"
-                          maxLength={500}
-                          onChange={(event) =>
-                            setReviewForm((currentState) => ({
-                              ...currentState,
-                              comment: event.target.value,
-                            }))
-                          }
-                          placeholder="Write your review here..."
-                          value={reviewForm.comment}
-                        />
-                        <div className="mt-3 text-right text-body-xs text-muted">
-                          {reviewForm.comment.length}/500
-                        </div>
-                      </div>
-
-                      <Button className="mt-5" isLoading={actionState.review} size="lg" type="submit">
-                        Submit Review
-                      </Button>
-                    </form>
-                  </div>
-
-                  <div className="space-y-4">
-                    {reviewState.status === "error" ? (
-                      <ErrorState
-                        description={reviewState.error || "Unable to load reviews."}
-                        onRetry={loadReviews}
-                        title="Unable to load reviews"
+                    <div ref={reviewFormRef}>
+                      <ReviewForm
+                        key={currentUserReview ? `${currentUserReview.id}-${currentUserReview.updatedAt || currentUserReview.comment}` : "new-review"}
+                        existingReview={currentUserReview}
+                        isAuthenticated={isAuthenticated}
+                        isSubmitting={actionState.review}
+                        onSubmit={handleReviewSubmit}
                       />
-                    ) : null}
-
-                    {reviewState.status !== "error" && reviewState.items.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center">
-                        <h3 className="text-h3">No reviews yet</h3>
-                        <p className="mt-3 text-body-sm text-muted">
-                          This prompt is new to the marketplace. Your review can be the first signal for other users.
-                        </p>
-                      </div>
-                    ) : null}
-
-                    {reviewState.items.slice(0, visibleReviews).map((review) => (
-                      <ReviewCard key={review.id} review={review} />
-                    ))}
-
-                    {reviewState.items.length > visibleReviews ? (
-                      <Button
-                        className="w-full"
-                        onPress={() => setVisibleReviews((currentValue) => currentValue + 3)}
-                        size="lg"
-                        variant="secondary"
-                      >
-                        Load More Reviews
-                      </Button>
-                    ) : null}
+                    </div>
                   </div>
+
+                  <ReviewList
+                    currentUserEmail={user?.email || ""}
+                    currentUserId={user?.id || ""}
+                    error={reviewState.error}
+                    isAdmin={String(user?.role || "").toLowerCase() === "admin"}
+                    isDeleting={actionState.deleteReview}
+                    onDelete={setPendingReviewDeletion}
+                    onEdit={() => {
+                      reviewFormRef.current?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
+                    }}
+                    onLoadMore={() => setVisibleReviews((currentValue) => currentValue + 3)}
+                    onRetry={loadReviews}
+                    reviews={reviewState.items}
+                    status={reviewState.status}
+                    visibleCount={visibleReviews}
+                  />
                 </div>
               </section>
             </MotionReveal>
@@ -1136,6 +1026,31 @@ export default function PromptDetailsClient({ promptId }) {
           </div>
         </div>
       </div>
+
+      {pendingReviewDeletion ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_36px_120px_rgba(15,23,42,0.18)]">
+            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Delete Review?
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              This will remove the review from the prompt details page. You can submit a new review later if needed.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                onPress={() => setPendingReviewDeletion(null)}
+                variant="secondary"
+              >
+                Cancel
+              </Button>
+              <Button isLoading={actionState.deleteReview} onPress={handleReviewDelete} variant="danger">
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <ResponsiveDrawer isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} title="Report Prompt">
         <form className="space-y-5" onSubmit={handleReportSubmit}>
