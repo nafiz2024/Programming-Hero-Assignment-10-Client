@@ -2,6 +2,7 @@ export const adminReportStatuses = ["All Statuses", "Open", "Warned", "Removed",
 export const adminUserRoles = ["All Roles", "User", "Creator", "Admin"];
 export const adminSubscriptions = ["All Subscriptions", "Free", "Premium", "Pro"];
 export const adminUserStatuses = ["All Statuses", "Active", "Pending", "Suspended", "Inactive"];
+export const adminPromptStatuses = ["All", "Pending", "Approved", "Rejected", "Featured"];
 
 const reportAccentPalette = [
   "from-sky-500/30 via-cyan-500/12 to-transparent",
@@ -212,6 +213,35 @@ function deriveTotalReviews(item, totalPrompts, index) {
   return Math.max(1, Math.round(totalPrompts * 0.8) + (index % 5));
 }
 
+function getPromptVisibilityLabel(value) {
+  const normalized = String(value || "public").toLowerCase();
+  return normalized.includes("private") || normalized.includes("premium") ? "Private" : "Public";
+}
+
+function getPromptStatusLabel(item, index = 0) {
+  const normalized = String(
+    item?.status || item?.approvalStatus || item?.moderationStatus || item?.state || "",
+  ).toLowerCase();
+
+  if (normalized.includes("feature")) {
+    return "Featured";
+  }
+
+  if (normalized.includes("approve")) {
+    return "Approved";
+  }
+
+  if (normalized.includes("reject")) {
+    return "Rejected";
+  }
+
+  if (normalized.includes("pending") || normalized.includes("review")) {
+    return "Pending";
+  }
+
+  return ["Pending", "Approved", "Approved", "Rejected", "Featured"][index % 5];
+}
+
 export function getStatusBadgeClass(status) {
   switch (status) {
     case "Dismissed":
@@ -262,6 +292,26 @@ export function getUserStatusBadgeClass(status) {
     default:
       return "bg-slate-100 text-slate-500";
   }
+}
+
+export function getPromptStatusBadgeClass(status) {
+  switch (status) {
+    case "Approved":
+      return "bg-emerald-50 text-emerald-600";
+    case "Rejected":
+      return "bg-rose-50 text-rose-600";
+    case "Featured":
+      return "bg-violet-50 text-violet-600";
+    case "Pending":
+    default:
+      return "bg-orange-50 text-orange-600";
+  }
+}
+
+export function getPromptVisibilityBadgeClass(visibility) {
+  return visibility === "Private"
+    ? "bg-slate-100 text-slate-600"
+    : "bg-emerald-50 text-emerald-600";
 }
 
 export function normalizeAdminStats(payload, reports = []) {
@@ -424,6 +474,123 @@ export function normalizeAdminUsers(payload) {
   });
 }
 
+export function normalizeAdminPrompts(payload) {
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.prompts)
+    ? payload.prompts
+    : Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload?.result)
+    ? payload.result
+    : [];
+
+  return items.map((item, index) => {
+    const title = item?.title || item?.name || `Prompt ${index + 1}`;
+    const creatorName =
+      item?.creator?.name ||
+      item?.creatorName ||
+      item?.author?.name ||
+      item?.authorName ||
+      `Creator ${index + 1}`;
+    const creatorEmail =
+      item?.creator?.email ||
+      item?.creatorEmail ||
+      item?.author?.email ||
+      item?.authorEmail ||
+      formatEmailFromName(creatorName);
+    const status = getPromptStatusLabel(item, index);
+    const visibility = getPromptVisibilityLabel(item?.visibility || item?.access || item?.plan);
+    const copyCount = parseNumber(item?.copyCount || item?.copies || item?.downloads, 64 + index * 17);
+    const bookmarkCount = parseNumber(
+      item?.bookmarkCount || item?.bookmarks || item?.savedCount,
+      Math.max(12, Math.round(copyCount * 0.42)),
+    );
+    const rating = parseNumber(item?.rating || item?.averageRating || item?.score, 4.2 + (index % 5) * 0.15);
+    const reviewCount = parseNumber(
+      item?.reviewCount || item?.reviewsCount || item?.reviews,
+      Math.max(8, Math.round(rating * 16)),
+    );
+    const category = toTitleCase(
+      item?.category?.name || item?.categoryName || item?.category || "AI Writing",
+    );
+    const aiTool = toTitleCase(item?.aiTool || item?.model || item?.tool || "ChatGPT");
+    const createdAt =
+      item?.createdAt ||
+      item?.submittedAt ||
+      item?.publishedAt ||
+      new Date(Date.now() - index * 86400000).toISOString();
+    const featured = Boolean(item?.featured || item?.isFeatured || status === "Featured");
+
+    return {
+      id: item?._id || item?.id || `prompt-${index}`,
+      title,
+      description:
+        item?.description ||
+        item?.summary ||
+        "High-quality marketplace prompt submitted for PromptFlow moderation.",
+      content:
+        item?.content ||
+        item?.promptContent ||
+        item?.prompt ||
+        item?.text ||
+        `You are a senior AI specialist.\n\nTask: ${title}\n\nRequirements:\n- Keep the output practical and structured.\n- Follow the selected AI tool style.\n- Return a polished final answer.`,
+      category,
+      aiTool,
+      visibility,
+      status,
+      featured,
+      copyCount,
+      bookmarkCount,
+      rating: Math.min(5, rating),
+      reviewCount,
+      creatorName,
+      creatorEmail,
+      creatorImage:
+        item?.creator?.image ||
+        item?.creator?.picture ||
+        item?.creator?.avatar ||
+        item?.author?.image ||
+        "",
+      creatorInitials: String(creatorName)
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase(),
+      creatorPromptCount: parseNumber(
+        item?.creator?.totalPrompts || item?.creatorPromptCount || item?.author?.promptCount,
+        18 + index * 3,
+      ),
+      creatorJoinedLabel: formatDateString(
+        item?.creator?.createdAt || item?.creatorJoinedAt || new Date(2024, 2, 15 + (index % 12)),
+      ),
+      createdAt,
+      createdLabel: new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(createdAt)),
+      rejectionReason:
+        item?.rejectionReason ||
+        item?.feedback ||
+        item?.moderationNote ||
+        item?.adminNote ||
+        "",
+      thumbnail:
+        item?.thumbnail ||
+        item?.thumbnailUrl ||
+        item?.image ||
+        item?.coverImage ||
+        "",
+      source: item,
+    };
+  });
+}
+
 export function filterAdminReports(reports, { query = "", status = adminReportStatuses[0] }) {
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -471,6 +638,47 @@ export function filterAdminUsers(
     const matchesStatus = status === adminUserStatuses[0] || user.status === status;
 
     return matchesQuery && matchesRole && matchesSubscription && matchesStatus;
+  });
+}
+
+export function filterAdminPrompts(
+  prompts,
+  {
+    query = "",
+    status = adminPromptStatuses[0],
+    category = "All Categories",
+    aiTool = "All AI Tools",
+    visibility = "All Visibility",
+  } = {},
+) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return prompts.filter((prompt) => {
+    const matchesQuery =
+      !normalizedQuery ||
+      [
+        prompt.title,
+        prompt.description,
+        prompt.creatorName,
+        prompt.creatorEmail,
+        prompt.category,
+        prompt.aiTool,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery);
+    const matchesStatus = status === adminPromptStatuses[0] || prompt.status === status;
+    const matchesCategory = category === "All Categories" || prompt.category === category;
+    const matchesAiTool = aiTool === "All AI Tools" || prompt.aiTool === aiTool;
+    const matchesVisibility = visibility === "All Visibility" || prompt.visibility === visibility;
+
+    return (
+      matchesQuery &&
+      matchesStatus &&
+      matchesCategory &&
+      matchesAiTool &&
+      matchesVisibility
+    );
   });
 }
 
@@ -560,4 +768,14 @@ export function buildAdminCreatorSummaryCards(creators) {
       trendTone: "text-emerald-500",
     },
   ];
+}
+
+export function buildAdminPromptStatusCounts(prompts) {
+  return {
+    All: prompts.length,
+    Pending: prompts.filter((prompt) => prompt.status === "Pending").length,
+    Approved: prompts.filter((prompt) => prompt.status === "Approved").length,
+    Rejected: prompts.filter((prompt) => prompt.status === "Rejected").length,
+    Featured: prompts.filter((prompt) => prompt.status === "Featured" || prompt.featured).length,
+  };
 }

@@ -74,7 +74,7 @@ export const adminNavLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/creators", label: "Creators", icon: UserCog },
-  { href: "/admin", label: "Prompts", icon: Boxes, disabled: true },
+  { href: "/admin/prompts", label: "Prompts", icon: Boxes },
   { href: "/admin", label: "Reviews", icon: MessagesSquare, disabled: true },
   { href: "/admin", label: "Categories", icon: Grid2x2, disabled: true },
   { href: "/admin", label: "AI Tools", icon: Sparkles, disabled: true },
@@ -89,7 +89,7 @@ export const adminNavLinks = [
 export const mobileAdminNavLinks = [
   { href: "/admin", label: "Home", icon: Home },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/prompts", label: "Prompts", icon: Boxes },
   { href: "/admin/reports", label: "Reports", icon: AlertTriangle },
   { href: "/admin/creators", label: "Creators", icon: UserCog },
-  { href: "/admin", label: "Profile", icon: UserRound },
 ];

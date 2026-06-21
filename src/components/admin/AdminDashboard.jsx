@@ -85,9 +85,9 @@ function ListRow({ badgeClass, badgeLabel, icon: Icon, subtitle, title, trailing
 }
 
 const quickModerationCards = [
-  { label: "Review Pending Prompts", meta: "12 pending", icon: ClipboardList, href: "/admin/reports" },
+  { label: "Review Pending Prompts", meta: "12 pending", icon: ClipboardList, href: "/admin/prompts" },
   { label: "View Reports", meta: "24 open", icon: Flag, href: "/admin/reports" },
-  { label: "Manage Users", meta: "12,458 total", icon: Users, href: "/admin" },
+  { label: "Manage Users", meta: "12,458 total", icon: Users, href: "/admin/users" },
   { label: "Content Guidelines", meta: "View guidelines", icon: Shield, href: "/admin" },
 ];
 
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
             </p>
           </div>
         </div>
-        <Button as={Link} href="/admin/reports">
+        <Button as={Link} href="/admin/prompts">
           Review Pending Prompts
         </Button>
       </section>
