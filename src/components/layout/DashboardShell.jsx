@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, MoonStar, Plus, Search } from "lucide-react";
+import { Menu, Plus, Search } from "lucide-react";
 
 import BottomNavigation from "@/components/layout/BottomNavigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
@@ -19,9 +19,24 @@ export default function DashboardShell({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { user } = useDashboard();
+  const searchInputRef = useRef(null);
   const isCreatorArea = pathname.startsWith("/creator");
   const isUserPromptArea = pathname.startsWith("/dashboard/prompts");
   const mobileLinks = isCreatorArea ? mobileCreatorNavLinks : mobileDashboardNavLinks;
+
+  useEffect(() => {
+    function handleShortcut(event) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => {
+      window.removeEventListener("keydown", handleShortcut);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.08),transparent_24%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.08),transparent_20%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] pb-24 md:pb-0">
@@ -49,6 +64,7 @@ export default function DashboardShell({ children }) {
                   <Search className="h-4 w-4 shrink-0 text-slate-400" />
                   <input
                     className="w-full border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                    ref={searchInputRef}
                     placeholder="Search prompts, tools or tags..."
                     type="text"
                   />
@@ -57,14 +73,7 @@ export default function DashboardShell({ children }) {
                   </span>
                 </div>
               </div>
-
               <NotificationBell className="hidden md:block" />
-              <button
-                className="hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 md:inline-flex"
-                type="button"
-              >
-                <MoonStar className="h-4 w-4" />
-              </button>
 
               {isCreatorArea ? (
                 <Button as={Link} className="hidden md:inline-flex" href="/creator/prompts/new">

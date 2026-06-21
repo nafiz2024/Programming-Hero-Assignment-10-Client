@@ -73,7 +73,7 @@ export default function DashboardSaved() {
 
     try {
       if (source !== "mock") {
-        await bookmarkApi.remove(pendingRemoval.bookmarkId || pendingRemoval.id);
+        await bookmarkApi.remove(pendingRemoval.id);
       }
 
       removePromptLocally(pendingRemoval.id);

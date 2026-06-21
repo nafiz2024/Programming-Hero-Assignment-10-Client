@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useState } from "react";
 
 import { bookmarkApi, paymentApi } from "@/lib/api";
 import {
@@ -17,6 +17,7 @@ export const NotificationsContext = createContext(undefined);
 
 export function NotificationsProvider({ children }) {
   const { isAuthenticated, loading, user } = useAuth();
+  const viewedUserId = user?.id || "";
   const [state, setState] = useState({
     status: "loading",
     items: [],
@@ -26,7 +27,7 @@ export function NotificationsProvider({ children }) {
     error: "",
   });
 
-  async function refreshNotifications() {
+  const refreshNotifications = useCallback(async () => {
     if (loading) {
       return;
     }
@@ -71,7 +72,7 @@ export function NotificationsProvider({ children }) {
       recentlyViewed: getRecentlyViewedPrompts(user.id),
       error: "",
     });
-  }
+  }, [isAuthenticated, loading, user]);
 
   function persistReadState(nextItems) {
     if (!user?.id) {
@@ -106,16 +107,16 @@ export function NotificationsProvider({ children }) {
     });
   }
 
-  function refreshViewedPrompts() {
-    if (!user?.id) {
+  const refreshViewedPrompts = useCallback(() => {
+    if (!viewedUserId) {
       return;
     }
 
     setState((current) => ({
       ...current,
-      recentlyViewed: getRecentlyViewedPrompts(user.id),
+      recentlyViewed: getRecentlyViewedPrompts(viewedUserId),
     }));
-  }
+  }, [viewedUserId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -125,7 +126,7 @@ export function NotificationsProvider({ children }) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [isAuthenticated, loading, user?.id]);
+  }, [refreshNotifications]);
 
   const summary = buildNotificationSummary(state.items);
 

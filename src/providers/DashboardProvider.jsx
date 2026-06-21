@@ -4,6 +4,7 @@ import { createContext, useEffect, useState } from "react";
 
 import { bookmarkApi, promptApi, userApi } from "@/lib/api";
 import {
+  DASHBOARD_REVIEWS_EVENT,
   buildDashboardStats,
   buildDashboardPromptStats,
   buildPromptPerformance,
@@ -19,6 +20,7 @@ import {
   normalizeDashboardPromptResponse,
   normalizeOwnedPrompts,
   seedLocalReviews,
+  saveDashboardReviews,
   setStorageItem,
   toDashboardPromptPayload,
 } from "@/lib/dashboard";
@@ -63,7 +65,7 @@ export function DashboardProvider({ children }) {
           : seedLocalReviews(normalizedUser, normalizedBookmarks, ownedPrompts.length > 0 ? ownedPrompts : promptCatalog);
 
       if (!persistedReviews) {
-        setStorageItem(getReviewsStorageKey(), localReviews);
+        saveDashboardReviews(localReviews);
       }
 
       setState({
@@ -93,8 +95,21 @@ export function DashboardProvider({ children }) {
       refreshDashboard();
     }, 0);
 
+    function syncStoredReviews() {
+      const nextReviews = getStorageItem(getReviewsStorageKey(), []);
+      setState((currentState) => ({
+        ...currentState,
+        localReviews: Array.isArray(nextReviews) ? nextReviews : currentState.localReviews,
+      }));
+    }
+
+    window.addEventListener("storage", syncStoredReviews);
+    window.addEventListener(DASHBOARD_REVIEWS_EVENT, syncStoredReviews);
+
     return () => {
       window.clearTimeout(timer);
+      window.removeEventListener("storage", syncStoredReviews);
+      window.removeEventListener(DASHBOARD_REVIEWS_EVENT, syncStoredReviews);
     };
   }, []);
 
@@ -115,7 +130,7 @@ export function DashboardProvider({ children }) {
   }
 
   function updateReviewsLocally(nextReviews) {
-    setStorageItem(getReviewsStorageKey(), nextReviews);
+    saveDashboardReviews(nextReviews);
     setState((currentState) => ({
       ...currentState,
       localReviews: nextReviews,

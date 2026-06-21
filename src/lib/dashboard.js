@@ -8,6 +8,7 @@ import {
 
 const PROFILE_STORAGE_KEY = "pf-dashboard-profile";
 const REVIEWS_STORAGE_KEY = "pf-dashboard-reviews";
+export const DASHBOARD_REVIEWS_EVENT = "pf-dashboard-reviews-updated";
 
 function toTitleCase(value) {
   if (!value) {
@@ -55,12 +56,25 @@ export function setStorageItem(key, value) {
   }
 }
 
+export function notifyDashboardReviewsUpdated() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(DASHBOARD_REVIEWS_EVENT));
+}
+
 export function getProfileStorageKey() {
   return PROFILE_STORAGE_KEY;
 }
 
 export function getReviewsStorageKey() {
   return REVIEWS_STORAGE_KEY;
+}
+
+export function saveDashboardReviews(reviews) {
+  setStorageItem(getReviewsStorageKey(), reviews);
+  notifyDashboardReviewsUpdated();
 }
 
 export function normalizeDashboardUser(payload, profileOverrides = {}) {

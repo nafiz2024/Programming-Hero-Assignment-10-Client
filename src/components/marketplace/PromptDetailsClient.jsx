@@ -38,7 +38,13 @@ import PromptDetailsSkeleton from "@/components/marketplace/PromptDetailsSkeleto
 import SelectField from "@/components/ui/SelectField";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 import { bookmarkApi, promptApi, reportApi, reviewApi } from "@/lib/api";
+import {
+  getReviewsStorageKey,
+  getStorageItem,
+  saveDashboardReviews,
+} from "@/lib/dashboard";
 import { formatCompactNumber } from "@/lib/marketplace";
 import { recordPromptView } from "@/lib/notifications";
 import { isPremiumSubscription } from "@/lib/payments";
@@ -77,6 +83,30 @@ function getBookmarkIds(payload) {
       .map((item) => item?.prompt?._id || item?.promptId || item?._id || item?.id)
       .filter(Boolean),
   );
+}
+
+async function syncBookmarkMutation(promptId, shouldBookmark) {
+  try {
+    if (shouldBookmark) {
+      return await promptApi.bookmark(promptId);
+    }
+
+    return await promptApi.unbookmark(promptId);
+  } catch (primaryError) {
+    if (shouldBookmark) {
+      return bookmarkApi.create({ promptId });
+    }
+
+    return bookmarkApi.remove(promptId);
+  }
+}
+
+async function submitPromptReport(promptId, payload) {
+  try {
+    return await reportApi.create(promptId, payload);
+  } catch {
+    return reportApi.createForPrompt(promptId, payload);
+  }
 }
 
 function MetaStat({ icon: Icon, label, value }) {
@@ -164,6 +194,7 @@ function UsageCard({ index, title, description }) {
 
 export default function PromptDetailsClient({ promptId }) {
   const { isAuthenticated, loading: authLoading, user } = useAuth();
+  const { refreshViewedPrompts } = useNotifications();
   const pathname = usePathname();
   const [promptState, setPromptState] = useState({
     status: "loading",
@@ -210,6 +241,28 @@ export default function PromptDetailsClient({ promptId }) {
     copy: 0,
     bookmark: 0,
   });
+
+  function syncDashboardReviewsLocally(nextReviews) {
+    const storedReviews = getStorageItem(getReviewsStorageKey(), []);
+    const filteredReviews = Array.isArray(storedReviews)
+      ? storedReviews.filter((review) => String(review.promptId) !== String(promptId))
+      : [];
+    const latestForPrompt = nextReviews
+      .filter((review) => String(review.promptId) === String(promptId))
+      .map((review) => ({
+        id: review.id,
+        promptId: review.promptId || promptId,
+        promptTitle: review.promptTitle || prompt?.title || "PromptFlow prompt",
+        rating: Number(review.rating || 0),
+        comment: review.comment || "",
+        createdAt: review.createdAt || new Date().toISOString(),
+        authorId: review.authorId || user?.id || "",
+        authorEmail: review.authorEmail || user?.email || "",
+        source: review.source || "api",
+      }));
+
+    saveDashboardReviews([...latestForPrompt, ...filteredReviews]);
+  }
 
   async function loadPrompt() {
     setPromptState((currentState) => ({
@@ -441,7 +494,8 @@ export default function PromptDetailsClient({ promptId }) {
       category: prompt.category,
       aiTool: prompt.aiTool,
     });
-  }, [prompt?.aiTool, prompt?.category, prompt?.description, prompt?.id, prompt?.title, user?.id]);
+    refreshViewedPrompts();
+  }, [prompt?.aiTool, prompt?.category, prompt?.description, prompt?.id, prompt?.title, refreshViewedPrompts, user?.id]);
 
   const reviewSummary = useMemo(
     () => ({
@@ -477,19 +531,23 @@ export default function PromptDetailsClient({ promptId }) {
 
     try {
       await navigator.clipboard.writeText(prompt.content);
-      await promptApi.copyPublic(prompt.id);
-
-      setPromptState((currentState) => ({
-        ...currentState,
-        item: currentState.item
-          ? {
-              ...currentState.item,
-              copyCount: currentState.item.copyCount + 1,
-            }
-          : currentState.item,
-      }));
       toastSuccess("Prompt copied successfully");
       setFeedbackPulse((currentState) => ({ ...currentState, copy: currentState.copy + 1 }));
+
+      try {
+        await promptApi.copyPublic(prompt.id);
+        setPromptState((currentState) => ({
+          ...currentState,
+          item: currentState.item
+            ? {
+                ...currentState.item,
+                copyCount: currentState.item.copyCount + 1,
+              }
+            : currentState.item,
+        }));
+      } catch {
+        // Keep copy UX successful even if analytics/counter update is unavailable.
+      }
     } catch (error) {
       toastError(error.message || "Unable to copy this prompt right now.");
     } finally {
@@ -512,11 +570,7 @@ export default function PromptDetailsClient({ promptId }) {
     setIsBookmarked(nextValue);
 
     try {
-      if (isBookmarked) {
-        await promptApi.unbookmark(prompt.id);
-      } else {
-        await promptApi.bookmark(prompt.id);
-      }
+      await syncBookmarkMutation(prompt.id, nextValue);
       toastSuccess(isBookmarked ? "Bookmark removed" : "Prompt bookmarked");
       setFeedbackPulse((currentState) => ({ ...currentState, bookmark: currentState.bookmark + 1 }));
     } catch (error) {
@@ -566,7 +620,14 @@ export default function PromptDetailsClient({ promptId }) {
         rating: Number(values.rating),
         comment: values.comment.trim(),
       });
-      await loadReviews();
+      const nextReviewResponse = await reviewApi.getByPrompt(promptId);
+      const normalized = normalizeReviewsPayload(nextReviewResponse);
+      setReviewState({
+        status: "success",
+        ...normalized,
+        error: "",
+      });
+      syncDashboardReviewsLocally(normalized.items);
       toastSuccess(currentUserReview ? "Review updated" : "Review submitted");
     } catch (error) {
       toastError(error.message || "Unable to submit your review.");
@@ -586,7 +647,14 @@ export default function PromptDetailsClient({ promptId }) {
       await reviewApi.removeForPrompt(promptId, {
         reviewId: pendingReviewDeletion.id,
       });
-      await loadReviews();
+      const nextReviewResponse = await reviewApi.getByPrompt(promptId);
+      const normalized = normalizeReviewsPayload(nextReviewResponse);
+      setReviewState({
+        status: "success",
+        ...normalized,
+        error: "",
+      });
+      syncDashboardReviewsLocally(normalized.items);
       setPendingReviewDeletion(null);
       toastSuccess("Review deleted");
     } catch (error) {
@@ -612,7 +680,7 @@ export default function PromptDetailsClient({ promptId }) {
     setActionState((currentState) => ({ ...currentState, report: true }));
 
     try {
-      await reportApi.create(promptId, {
+      await submitPromptReport(promptId, {
         reason: reportForm.reason,
         description: reportForm.description.trim(),
       });

@@ -186,8 +186,8 @@ function PremiumPageContent() {
                 <Button as={Link} href="/pricing" variant="secondary">
                   View Pricing
                 </Button>
-                <Button onPress={() => {}} variant="secondary">
-                  Manage Billing
+                <Button as={Link} href="/payment" variant="secondary">
+                  Checkout Again
                 </Button>
               </div>
             </div>
