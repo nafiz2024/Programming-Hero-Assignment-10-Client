@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark,
@@ -38,6 +39,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import { bookmarkApi, promptApi, reportApi, reviewApi } from "@/lib/api";
 import { formatCompactNumber } from "@/lib/marketplace";
+import { isPremiumSubscription } from "@/lib/payments";
 import {
   normalizePromptDetails,
   normalizeReviewsPayload,
@@ -160,6 +162,7 @@ function UsageCard({ index, title, description }) {
 
 export default function PromptDetailsClient({ promptId }) {
   const { isAuthenticated, loading: authLoading, user } = useAuth();
+  const pathname = usePathname();
   const [promptState, setPromptState] = useState({
     status: "loading",
     item: null,
@@ -197,6 +200,9 @@ export default function PromptDetailsClient({ promptId }) {
   const [pendingReviewDeletion, setPendingReviewDeletion] = useState(null);
   const reviewFormRef = useRef(null);
   const prompt = promptState.item;
+  const isPremiumUser = isPremiumSubscription(user?.subscription);
+  const isPromptLocked = Boolean(prompt?.locked && !isPremiumUser);
+  const paymentHref = `/payment?returnTo=${encodeURIComponent(pathname || `/prompts/${promptId}`)}`;
 
   async function loadPrompt() {
     setPromptState((currentState) => ({
@@ -436,7 +442,7 @@ export default function PromptDetailsClient({ promptId }) {
     ) || null;
 
   async function handleCopy() {
-    if (!prompt || prompt.locked) {
+    if (!prompt || isPromptLocked) {
       toastWarning("Upgrade to unlock this premium prompt.");
       return;
     }
@@ -671,7 +677,7 @@ export default function PromptDetailsClient({ promptId }) {
 
               <div className="flex flex-wrap gap-3">
                 <Button
-                  isDisabled={prompt.locked}
+                  isDisabled={isPromptLocked}
                   isLoading={actionState.copy}
                   onPress={handleCopy}
                   size="lg"
@@ -717,7 +723,7 @@ export default function PromptDetailsClient({ promptId }) {
                     <button
                       aria-label="Copy prompt"
                       className="pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-muted transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-                      disabled={prompt.locked}
+                      disabled={isPromptLocked}
                       onClick={handleCopy}
                       type="button"
                     >
@@ -751,13 +757,13 @@ export default function PromptDetailsClient({ promptId }) {
                   <div
                     className={clsx(
                       "overflow-x-auto whitespace-pre-wrap px-4 py-5 font-mono text-[13px] leading-7 text-slate-100 md:px-5 md:text-sm",
-                      prompt.locked ? "blur-md select-none" : "",
+                      isPromptLocked ? "blur-md select-none" : "",
                     )}
                   >
                     <PromptContentRenderer content={prompt.content} />
                   </div>
 
-                  {prompt.locked ? (
+                  {isPromptLocked ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-background/60 p-6 backdrop-blur-md">
                       <div className="max-w-md rounded-xl border border-primary/20 bg-background-alt/92 p-6 text-center shadow-glow">
                         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/14 text-primary">
@@ -767,7 +773,7 @@ export default function PromptDetailsClient({ promptId }) {
                         <p className="mt-3 text-body-sm text-muted">
                           Upgrade to reveal the full prompt content, copy access, and premium creator tools.
                         </p>
-                        <Button className="mt-5" onPress={() => toastWarning("Premium upgrade flow will be connected in a later phase.")}>
+                        <Button as={Link} className="mt-5" href={paymentHref}>
                           Unlock Premium
                         </Button>
                       </div>
@@ -1018,8 +1024,9 @@ export default function PromptDetailsClient({ promptId }) {
                   </div>
 
                   <Button
+                    as={Link}
                     className="mt-6 w-full"
-                    onPress={() => toastWarning("Payment flow will be connected in a later phase.")}
+                    href={paymentHref}
                     size="lg"
                   >
                     Upgrade Now

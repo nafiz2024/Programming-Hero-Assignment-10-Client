@@ -112,7 +112,9 @@ export default function DashboardOverview() {
                 <p className="mt-2 text-base text-slate-500">Upgrade to unlock premium prompts and more features.</p>
               </div>
             </div>
-            <Button className="md:min-w-[180px]">Upgrade for $5</Button>
+            <Button as={Link} className="md:min-w-[180px]" href="/pricing">
+              Upgrade for $5
+            </Button>
           </div>
         </section>
       </MotionReveal>
@@ -195,8 +197,15 @@ export default function DashboardOverview() {
                 ))}
               </div>
               <div className="space-y-3">
-                <Button className="w-full md:min-w-[220px]">Upgrade Now - $5</Button>
-                <Button className="border-white/12 bg-white/8 text-white hover:bg-white/12" variant="secondary">
+                <Button as={Link} className="w-full md:min-w-[220px]" href="/payment">
+                  Upgrade Now - $5
+                </Button>
+                <Button
+                  as={Link}
+                  className="border-white/12 bg-white/8 text-white hover:bg-white/12"
+                  href="/premium"
+                  variant="secondary"
+                >
                   Learn more about Premium
                 </Button>
               </div>
