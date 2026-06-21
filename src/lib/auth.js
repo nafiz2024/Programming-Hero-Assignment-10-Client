@@ -56,6 +56,16 @@ export function getUserImageSrc(user) {
   );
 }
 
+export function normalizeRole(role) {
+  if (typeof role !== "string") {
+    return "user";
+  }
+
+  const normalizedRole = role.trim().toLowerCase();
+
+  return normalizedRole || "user";
+}
+
 export function normalizeAuthUser(payload) {
   if (!payload) {
     return null;
@@ -81,13 +91,13 @@ export function normalizeAuthUser(payload) {
     photoURL: candidate.photoURL || candidate.picture || candidate.image || "",
     avatar: candidate.avatar || candidate.picture || candidate.image || "",
     photo: candidate.photo || candidate.picture || candidate.image || "",
-    role: candidate.role || "user",
+    role: normalizeRole(candidate.role),
     subscription: candidate.subscription || "free",
   };
 }
 
 export function getPostAuthRedirect(user) {
-  const role = normalizeAuthUser(user)?.role;
+  const role = normalizeRole(normalizeAuthUser(user)?.role);
 
   if (role === "admin") {
     return "/admin";

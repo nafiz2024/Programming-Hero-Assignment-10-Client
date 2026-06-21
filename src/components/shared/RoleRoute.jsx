@@ -1,16 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import GlobalLoader from "@/components/ui/GlobalLoader";
 import { useAuth } from "@/hooks/useAuth";
+import { getPostAuthRedirect, normalizeRole } from "@/lib/auth";
+import { toastWarning } from "@/lib/toast";
 
 export default function RoleRoute({ allowedRoles = [], children, redirectTo = "/" }) {
+  const pathname = usePathname();
   const router = useRouter();
   const { user, loading, isAuthenticated } = useAuth();
-  const userRole = user?.role;
-  const isAllowed = allowedRoles.includes(userRole);
+  const lastBlockedPathRef = useRef("");
+  const userRole = normalizeRole(user?.role);
+  const normalizedAllowedRoles = useMemo(
+    () => allowedRoles.map((role) => normalizeRole(role)),
+    [allowedRoles],
+  );
+  const isAllowed = normalizedAllowedRoles.includes(userRole);
+  const forbiddenRedirect = redirectTo === "/" ? getPostAuthRedirect(user) : redirectTo;
 
   useEffect(() => {
     if (loading) {
@@ -23,9 +32,17 @@ export default function RoleRoute({ allowedRoles = [], children, redirectTo = "/
     }
 
     if (!isAllowed) {
-      router.replace(redirectTo);
+      if (lastBlockedPathRef.current !== pathname) {
+        toastWarning("You do not have permission to access this page.");
+        lastBlockedPathRef.current = pathname;
+      }
+
+      router.replace(forbiddenRedirect);
+      return;
     }
-  }, [isAllowed, isAuthenticated, loading, redirectTo, router]);
+
+    lastBlockedPathRef.current = "";
+  }, [forbiddenRedirect, isAllowed, isAuthenticated, loading, pathname, router]);
 
   if (loading) {
     return <GlobalLoader label="Checking access" />;

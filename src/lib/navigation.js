@@ -16,13 +16,10 @@ import {
   FileText,
   PlusSquare,
   BadgePlus,
-  Shield,
   Users,
   UserCog,
   Boxes,
-  MessagesSquare,
   Wallet,
-  Settings,
   Flag,
 } from "lucide-react";
 
@@ -42,9 +39,10 @@ export const authNavLinks = [
 export const dashboardNavLinks = [
   { href: "/dashboard", label: "Dashboard", icon: Grid2x2 },
   { href: "/dashboard/prompts", label: "My Prompts", icon: FileText },
-  { href: "/dashboard/profile", label: "Profile", icon: UserRound },
+  { href: "/dashboard/prompts/new", label: "Add Prompt", icon: PlusSquare },
   { href: "/dashboard/saved", label: "Saved Prompts", icon: Heart },
-  { href: "/dashboard/reviews", label: "My Reviews", icon: MessageSquare },
+  { href: "/dashboard/reviews", label: "Reviews", icon: MessageSquare },
+  { href: "/dashboard/profile", label: "Profile", icon: UserRound },
   { action: "logout", label: "Logout", icon: LogOut },
 ];
 
@@ -58,8 +56,9 @@ export const mobileDashboardNavLinks = [
 export const creatorDashboardNavLinks = [
   { href: "/creator", label: "Creator Dashboard", icon: LayoutDashboard },
   { href: "/creator/prompts", label: "My Prompts", icon: FileText },
-  { href: "/creator/prompts/new", label: "Add New Prompt", icon: PlusSquare },
-  { href: "/dashboard/profile", label: "Profile Settings", icon: UserRound },
+  { href: "/creator/prompts/new", label: "Add Prompt", icon: PlusSquare },
+  { href: "/creator/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/profile", label: "Profile", icon: UserRound },
   { action: "logout", label: "Logout", icon: LogOut },
 ];
 
@@ -71,18 +70,13 @@ export const mobileCreatorNavLinks = [
 ];
 
 export const adminNavLinks = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/creators", label: "Creators", icon: UserCog },
   { href: "/admin/prompts", label: "Prompts", icon: Boxes },
-  { href: "/admin", label: "Reviews", icon: MessagesSquare, disabled: true },
-  { href: "/admin", label: "Categories", icon: Grid2x2, disabled: true },
-  { href: "/admin", label: "AI Tools", icon: Sparkles, disabled: true },
-  { href: "/admin", label: "Payments", icon: Wallet, disabled: true },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/reports", label: "Reports", icon: Flag },
-  { href: "/admin", label: "Moderation", icon: Shield, disabled: true },
-  { href: "/admin", label: "Settings", icon: Settings, disabled: true },
+  { href: "/admin/payments", label: "Payments", icon: Wallet, disabled: true },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { action: "logout", label: "Logout", icon: LogOut },
 ];
 
