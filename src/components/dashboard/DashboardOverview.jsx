@@ -135,7 +135,7 @@ export default function DashboardOverview() {
                 <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Recent Activity</h2>
                 <p className="mt-2 text-sm text-slate-500">A quick snapshot of your latest prompt actions.</p>
               </div>
-              <Link className="text-sm font-semibold text-primary transition hover:text-secondary" href="/dashboard/prompts">
+              <Link className="text-sm font-semibold text-primary transition hover:text-secondary" href="/dashboard/activity">
                 View All
               </Link>
             </div>

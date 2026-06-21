@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Menu, CalendarDays, ChevronDown } from "lucide-react";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +44,7 @@ export default function AdminShell({ children }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <NotificationBell />
               <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700">
                 <CalendarDays className="h-4 w-4 text-slate-400" />
                 <span>May 30, 2024</span>

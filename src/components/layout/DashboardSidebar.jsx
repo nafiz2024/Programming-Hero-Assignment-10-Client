@@ -98,8 +98,9 @@ export default function DashboardSidebar({ onNavigate }) {
             Get unlimited access to all premium prompts and advanced creator tools.
           </p>
           <Button
+            as={Link}
             className="mt-5 w-full border-0 bg-white text-slate-950 hover:bg-white/90"
-            onPress={() => toastSuccess("Premium upgrade flow will be connected later.")}
+            href="/pricing"
             variant="secondary"
           >
             Upgrade Now

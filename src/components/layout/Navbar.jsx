@@ -5,7 +5,11 @@ import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import clsx from "clsx";
 
+import NotificationBell from "@/components/notifications/NotificationBell";
 import Button from "@/components/ui/Button";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { useAuth } from "@/hooks/useAuth";
+import { getPostAuthRedirect } from "@/lib/auth";
 import PageContainer from "@/components/shared/PageContainer";
 import { authNavLinks, primaryNavLinks } from "@/lib/navigation";
 
@@ -23,6 +27,8 @@ function isActiveLink(pathname, href) {
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { isAuthenticated, user } = useAuth();
+  const dashboardHref = getPostAuthRedirect(user);
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-background/72 backdrop-blur-xl">
@@ -62,14 +68,43 @@ export default function Navbar() {
           })}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
-          <Button as={Link} href={authNavLinks[0].href} size="sm" variant="secondary">
-            {authNavLinks[0].label}
-          </Button>
-          <Button as={Link} href={authNavLinks[1].href} size="sm">
-            {authNavLinks[1].label}
-          </Button>
-        </div>
+        {isAuthenticated ? (
+          <div className="hidden items-center gap-3 md:flex">
+            <NotificationBell />
+            <Button as={Link} href={dashboardHref} size="sm" variant="secondary">
+              Dashboard
+            </Button>
+            <Link
+              className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/6 px-3 py-2"
+              href={dashboardHref}
+            >
+              <UserAvatar
+                alt={user?.name || "PromptFlow User"}
+                className="h-9 w-9 bg-brand-gradient text-xs text-white"
+                fallback={(user?.name || "PF")
+                  .split(" ")
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join("")
+                  .toUpperCase()}
+                src={user?.image || user?.picture || user?.photoURL || user?.avatar || user?.photo}
+              />
+              <div className="text-left">
+                <p className="text-body-sm font-semibold text-foreground">{user?.name || "PromptFlow User"}</p>
+                <p className="text-body-xs text-muted">{user?.role || "User"}</p>
+              </div>
+            </Link>
+          </div>
+        ) : (
+          <div className="hidden items-center gap-3 md:flex">
+            <Button as={Link} href={authNavLinks[0].href} size="sm" variant="secondary">
+              {authNavLinks[0].label}
+            </Button>
+            <Button as={Link} href={authNavLinks[1].href} size="sm">
+              {authNavLinks[1].label}
+            </Button>
+          </div>
+        )}
       </PageContainer>
     </header>
   );

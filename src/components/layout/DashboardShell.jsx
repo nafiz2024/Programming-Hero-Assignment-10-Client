@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, Menu, MoonStar, Plus, Search } from "lucide-react";
+import { Menu, MoonStar, Plus, Search } from "lucide-react";
 
 import BottomNavigation from "@/components/layout/BottomNavigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import Button from "@/components/ui/Button";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -56,12 +57,7 @@ export default function DashboardShell({ children }) {
                 </div>
               </div>
 
-              <button
-                className="hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 md:inline-flex"
-                type="button"
-              >
-                <Bell className="h-4 w-4" />
-              </button>
+              <NotificationBell className="hidden md:block" />
               <button
                 className="hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 md:inline-flex"
                 type="button"

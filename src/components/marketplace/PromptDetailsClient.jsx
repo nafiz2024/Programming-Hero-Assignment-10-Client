@@ -39,6 +39,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import { bookmarkApi, promptApi, reportApi, reviewApi } from "@/lib/api";
 import { formatCompactNumber } from "@/lib/marketplace";
+import { recordPromptView } from "@/lib/notifications";
 import { isPremiumSubscription } from "@/lib/payments";
 import {
   normalizePromptDetails,
@@ -421,6 +422,20 @@ export default function PromptDetailsClient({ promptId }) {
       isMounted = false;
     };
   }, [authLoading, isAuthenticated, promptId]);
+
+  useEffect(() => {
+    if (!prompt?.id) {
+      return;
+    }
+
+    recordPromptView(user?.id, {
+      id: prompt.id,
+      title: prompt.title,
+      description: prompt.description,
+      category: prompt.category,
+      aiTool: prompt.aiTool,
+    });
+  }, [prompt?.aiTool, prompt?.category, prompt?.description, prompt?.id, prompt?.title, user?.id]);
 
   const reviewSummary = useMemo(
     () => ({

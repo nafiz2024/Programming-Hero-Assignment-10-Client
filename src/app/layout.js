@@ -3,6 +3,7 @@ import "../styles/globals.css";
 import { Geist } from "next/font/google";
 
 import { AuthProvider } from "@/providers/AuthProvider";
+import { NotificationsProvider } from "@/providers/NotificationsProvider";
 import { UIProvider } from "@/providers/UIProvider";
 
 const geist = Geist({
@@ -19,7 +20,9 @@ export default function RootLayout({ children }) {
     <html className={geist.className} data-scroll-behavior="smooth" lang="en" suppressHydrationWarning>
       <body className="bg-background text-foreground" suppressHydrationWarning>
         <AuthProvider>
-          <UIProvider>{children}</UIProvider>
+          <NotificationsProvider>
+            <UIProvider>{children}</UIProvider>
+          </NotificationsProvider>
         </AuthProvider>
       </body>
     </html>
