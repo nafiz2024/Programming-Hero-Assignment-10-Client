@@ -199,6 +199,39 @@ a {
     background-position: center;
     background-size: 28px 28px;
   }
+
+  .pf-error-orbit {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .pf-error-orbit::before,
+  .pf-error-orbit::after {
+    content: "";
+    position: absolute;
+    border-radius: 9999px;
+    pointer-events: none;
+    opacity: 0.85;
+  }
+
+  .pf-error-orbit::before {
+    left: 10%;
+    top: 10%;
+    width: 140px;
+    height: 140px;
+    border: 1px solid rgba(139, 92, 246, 0.14);
+    box-shadow: 0 0 50px rgba(139, 92, 246, 0.08);
+  }
+
+  .pf-error-orbit::after {
+    right: 10%;
+    bottom: 10%;
+    width: 180px;
+    height: 180px;
+    border: 1px solid rgba(96, 165, 250, 0.14);
+    box-shadow: 0 0 56px rgba(96, 165, 250, 0.08);
+  }
 }
 
 @layer utilities {
