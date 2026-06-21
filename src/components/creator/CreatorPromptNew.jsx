@@ -8,6 +8,7 @@ import { CheckCircle2, Eye, Globe, Lock, Save, Send, Sparkles } from "lucide-rea
 import { useForm, useWatch } from "react-hook-form";
 
 import DashboardPageHeader from "@/components/dashboard/DashboardPageHeader";
+import FormSkeleton from "@/components/common/FormSkeleton";
 import MotionReveal from "@/components/shared/MotionReveal";
 import Button from "@/components/ui/Button";
 import ErrorState from "@/components/ui/ErrorState";
@@ -130,6 +131,10 @@ export default function CreatorPromptNew() {
     setValue("thumbnail", prompt.thumbnail || "");
     setValue("content", prompt.content);
     toastSuccess(`Loaded template: ${prompt.title}`);
+  }
+
+  if (status === "loading") {
+    return <FormSkeleton />;
   }
 
   if (status === "error" && prompts.length === 0) {

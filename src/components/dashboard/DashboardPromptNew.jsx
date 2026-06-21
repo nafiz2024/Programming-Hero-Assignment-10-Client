@@ -8,6 +8,7 @@ import { CheckCircle2, Eye, Globe, HelpCircle, Lock, Save, Send, Sparkles, Uploa
 import { useForm, useWatch } from "react-hook-form";
 
 import DashboardPageHeader from "@/components/dashboard/DashboardPageHeader";
+import FormSkeleton from "@/components/common/FormSkeleton";
 import MotionReveal from "@/components/shared/MotionReveal";
 import Button from "@/components/ui/Button";
 import { useDashboard } from "@/hooks/useDashboard";
@@ -31,6 +32,7 @@ export default function DashboardPromptNew() {
     createOwnedPrompt,
     ownedPrompts,
     promptPerformance,
+    status,
   } = useDashboard();
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [limitCtaVisible, setLimitCtaVisible] = useState(false);
@@ -136,6 +138,10 @@ export default function DashboardPromptNew() {
       content: prompt.content,
     });
     toastSuccess(`Loaded ${prompt.title} into the editor`);
+  }
+
+  if (status === "loading") {
+    return <FormSkeleton />;
   }
 
   return (
