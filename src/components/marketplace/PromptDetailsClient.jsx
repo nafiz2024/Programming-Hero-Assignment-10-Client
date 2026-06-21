@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
   Bot,
@@ -200,10 +201,15 @@ export default function PromptDetailsClient({ promptId }) {
   const [visibleReviews, setVisibleReviews] = useState(3);
   const [pendingReviewDeletion, setPendingReviewDeletion] = useState(null);
   const reviewFormRef = useRef(null);
+  const shouldReduceMotion = useReducedMotion();
   const prompt = promptState.item;
   const isPremiumUser = isPremiumSubscription(user?.subscription);
   const isPromptLocked = Boolean(prompt?.locked && !isPremiumUser);
   const paymentHref = `/payment?returnTo=${encodeURIComponent(pathname || `/prompts/${promptId}`)}`;
+  const [feedbackPulse, setFeedbackPulse] = useState({
+    copy: 0,
+    bookmark: 0,
+  });
 
   async function loadPrompt() {
     setPromptState((currentState) => ({
@@ -483,6 +489,7 @@ export default function PromptDetailsClient({ promptId }) {
           : currentState.item,
       }));
       toastSuccess("Prompt copied successfully");
+      setFeedbackPulse((currentState) => ({ ...currentState, copy: currentState.copy + 1 }));
     } catch (error) {
       toastError(error.message || "Unable to copy this prompt right now.");
     } finally {
@@ -511,6 +518,7 @@ export default function PromptDetailsClient({ promptId }) {
         await promptApi.bookmark(prompt.id);
       }
       toastSuccess(isBookmarked ? "Bookmark removed" : "Prompt bookmarked");
+      setFeedbackPulse((currentState) => ({ ...currentState, bookmark: currentState.bookmark + 1 }));
     } catch (error) {
       setIsBookmarked(!nextValue);
       toastError(error.message || "Unable to update your bookmark.");
@@ -691,25 +699,37 @@ export default function PromptDetailsClient({ promptId }) {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Button
-                  isDisabled={isPromptLocked}
-                  isLoading={actionState.copy}
-                  onPress={handleCopy}
-                  size="lg"
+                <motion.div
+                  animate={feedbackPulse.copy ? { scale: [1, 1.04, 1] } : undefined}
+                  key={`copy-cta-${feedbackPulse.copy}`}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
                 >
-                  <Copy className="h-4 w-4" />
-                  Copy Prompt
-                </Button>
-                <Button
-                  isDisabled={!isBookmarkReady}
-                  isLoading={actionState.bookmark}
-                  onPress={handleBookmarkToggle}
-                  size="lg"
-                  variant="secondary"
+                  <Button
+                    isDisabled={isPromptLocked}
+                    isLoading={actionState.copy}
+                    onPress={handleCopy}
+                    size="lg"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy Prompt
+                  </Button>
+                </motion.div>
+                <motion.div
+                  animate={feedbackPulse.bookmark ? { scale: [1, 1.05, 1] } : undefined}
+                  key={`bookmark-cta-${feedbackPulse.bookmark}-${isBookmarked ? "on" : "off"}`}
+                  transition={{ duration: 0.28, ease: "easeOut" }}
                 >
-                  <Bookmark className={clsx("h-4 w-4", isBookmarked ? "fill-current" : "")} />
-                  {isBookmarked ? "Bookmarked" : "Bookmark"}
-                </Button>
+                  <Button
+                    isDisabled={!isBookmarkReady}
+                    isLoading={actionState.bookmark}
+                    onPress={handleBookmarkToggle}
+                    size="lg"
+                    variant="secondary"
+                  >
+                    <Bookmark className={clsx("h-4 w-4", isBookmarked ? "fill-current" : "")} />
+                    {isBookmarked ? "Bookmarked" : "Bookmark"}
+                  </Button>
+                </motion.div>
                 <Button onPress={handleShare} size="lg" variant="secondary">
                   <Share2 className="h-4 w-4" />
                   Share
@@ -735,15 +755,20 @@ export default function PromptDetailsClient({ promptId }) {
                     <h2 className="mt-2 text-h2">Ready-to-use prompt structure</h2>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
+                    <motion.button
+                      animate={feedbackPulse.copy ? { scale: [1, 1.08, 1] } : undefined}
                       aria-label="Copy prompt"
                       className="pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-muted transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                       disabled={isPromptLocked}
+                      key={`content-copy-${feedbackPulse.copy}`}
                       onClick={handleCopy}
                       type="button"
+                      transition={{ duration: 0.26, ease: "easeOut" }}
+                      whileHover={shouldReduceMotion ? undefined : { scale: 1.06 }}
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
                     >
                       {actionState.copy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
-                    </button>
+                    </motion.button>
                     <button
                       aria-label="Expand prompt"
                       className="pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-muted transition hover:text-foreground"

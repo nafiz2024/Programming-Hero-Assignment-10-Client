@@ -10,7 +10,11 @@ import { motionPresets } from "@/lib/motion";
 export default function ResponsiveDrawer({ children, isOpen, onClose, title }) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const shouldReduceMotion = useReducedMotion();
-  const preset = shouldReduceMotion ? motionPresets.reduced : motionPresets.modalSpring;
+  const preset = shouldReduceMotion
+    ? motionPresets.reduced
+    : isMobile
+    ? motionPresets.drawerSlide
+    : motionPresets.modalSpring;
 
   return (
     <AnimatePresence>

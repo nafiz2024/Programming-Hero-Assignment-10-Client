@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   BadgeCheck,
   CalendarDays,
@@ -63,6 +64,8 @@ function Field({ icon: Icon, label, name, onChange, placeholder, type = "text", 
 }
 
 function StatusCard({ onRetry, state, transactionId }) {
+  const shouldReduceMotion = useReducedMotion();
+
   if (state === "idle" || state === "processing") {
     return null;
   }
@@ -70,10 +73,14 @@ function StatusCard({ onRetry, state, transactionId }) {
   if (state === "success") {
     return (
       <div className="rounded-[26px] border border-emerald-200 bg-emerald-50 p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+      <div className="flex items-start gap-3">
+          <motion.div
+            animate={shouldReduceMotion ? undefined : { scale: [0.94, 1.08, 1] }}
+            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600"
+            transition={{ duration: 0.45, ease: "easeOut" }}
+          >
             <CheckCircle2 className="h-5 w-5" />
-          </div>
+          </motion.div>
           <div>
             <h3 className="text-lg font-semibold text-emerald-700">Premium activated</h3>
             <p className="mt-2 text-sm leading-6 text-emerald-700/85">

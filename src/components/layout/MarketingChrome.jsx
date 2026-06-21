@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
+import FadeIn from "@/components/shared/FadeIn";
 
 const authRoutes = new Set(["/login", "/register"]);
 
@@ -12,15 +13,20 @@ export default function MarketingChrome({ children }) {
   const isAuthRoute = authRoutes.has(pathname);
 
   if (isAuthRoute) {
-    return <main className="min-h-screen">{children}</main>;
+    return (
+      <main className="min-h-screen">
+        <FadeIn>{children}</FadeIn>
+      </main>
+    );
   }
 
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <FadeIn>{children}</FadeIn>
+      </main>
       <Footer />
     </div>
   );
 }
-

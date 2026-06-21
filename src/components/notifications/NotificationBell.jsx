@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Bell, ChevronRight } from "lucide-react";
 
 import NotificationCard from "@/components/notifications/NotificationCard";
-import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
 import Skeleton from "@/components/ui/Skeleton";
 import { useNotifications } from "@/hooks/useNotifications";
+import { motionPresets } from "@/lib/motion";
 
 function NotificationPreviewSkeleton() {
   return (
@@ -39,7 +40,9 @@ export default function NotificationBell({ className = "" }) {
   } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
+  const shouldReduceMotion = useReducedMotion();
   const previewItems = items.slice(0, 4);
+  const dropdownPreset = shouldReduceMotion ? motionPresets.reduced : motionPresets.dropdownScale;
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -65,23 +68,39 @@ export default function NotificationBell({ className = "" }) {
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      <button
+      <motion.button
+        animate={unread > 0 && !shouldReduceMotion ? { y: [0, -2, 0] } : { y: 0 }}
         aria-expanded={isOpen}
         aria-label="Notifications"
         className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
         onClick={() => setIsOpen((current) => !current)}
+        transition={unread > 0 && !shouldReduceMotion ? { duration: 0.45, ease: "easeOut" } : { duration: 0.2 }}
         type="button"
+        whileHover={shouldReduceMotion ? undefined : { y: -1, scale: 1.02 }}
+        whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
       >
         <Bell className="h-4 w-4" />
         {unread > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-[20px] items-center justify-center rounded-full bg-brand-gradient px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-[0_10px_20px_rgba(99,102,241,0.35)]">
+          <motion.span
+            animate={shouldReduceMotion ? undefined : { scale: [1, 1.08, 1] }}
+            className="absolute -right-0.5 -top-0.5 inline-flex min-w-[20px] items-center justify-center rounded-full bg-brand-gradient px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-[0_10px_20px_rgba(99,102,241,0.35)]"
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
             {unread > 9 ? "9+" : unread}
-          </span>
+          </motion.span>
         ) : null}
-      </button>
+      </motion.button>
 
-      {isOpen ? (
-        <div className="absolute right-0 top-[calc(100%+12px)] z-[85] w-[min(92vw,420px)] overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_28px_80px_rgba(15,23,42,0.16)]">
+      <AnimatePresence>
+        {isOpen ? (
+        <motion.div
+          animate="visible"
+          className="absolute right-0 top-[calc(100%+12px)] z-[85] w-[min(92vw,420px)] overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_28px_80px_rgba(15,23,42,0.16)]"
+          exit="exit"
+          initial="hidden"
+          transition={dropdownPreset.transition}
+          variants={dropdownPreset.variants}
+        >
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-lg font-semibold text-slate-950">Notifications</p>
@@ -131,8 +150,9 @@ export default function NotificationBell({ className = "" }) {
             View all notifications
             <ChevronRight className="h-4 w-4" />
           </Link>
-        </div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </div>
   );
 }

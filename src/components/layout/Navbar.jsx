@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, LayoutDashboard, LogOut, Sparkles, UserRound } from "lucide-react";
 import clsx from "clsx";
 
@@ -11,6 +12,7 @@ import Button from "@/components/ui/Button";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import { getPostAuthRedirect, normalizeRole } from "@/lib/auth";
+import { motionPresets } from "@/lib/motion";
 import PageContainer from "@/components/shared/PageContainer";
 import { authNavLinks, primaryNavLinks } from "@/lib/navigation";
 import { toastError, toastSuccess } from "@/lib/toast";
@@ -34,12 +36,14 @@ export default function Navbar() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const profileMenuRef = useRef(null);
+  const shouldReduceMotion = useReducedMotion();
   const userRole = normalizeRole(user?.role);
   const dashboardHref = getPostAuthRedirect(user);
   const profileHref = userRole === "admin" ? "/admin" : "/dashboard/profile";
   const hasUser = Boolean(user?.id || user?.email);
   const showAuthenticatedActions = hasUser || isAuthenticated;
   const showGuestActions = !loading && !showAuthenticatedActions;
+  const dropdownPreset = shouldReduceMotion ? motionPresets.reduced : motionPresets.dropdownScale;
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -150,8 +154,16 @@ export default function Navbar() {
                   <ChevronDown className="hidden h-4 w-4 text-muted sm:block" />
                 </button>
 
-                {isProfileMenuOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+12px)] z-[85] min-w-[220px] rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_28px_80px_rgba(15,23,42,0.16)]">
+                <AnimatePresence>
+                  {isProfileMenuOpen ? (
+                  <motion.div
+                    animate="visible"
+                    className="absolute right-0 top-[calc(100%+12px)] z-[85] min-w-[220px] rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_28px_80px_rgba(15,23,42,0.16)]"
+                    exit="exit"
+                    initial="hidden"
+                    transition={dropdownPreset.transition}
+                    variants={dropdownPreset.variants}
+                  >
                     <Link
                       className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                       href={dashboardHref}
@@ -176,8 +188,9 @@ export default function Navbar() {
                       <LogOut className={clsx("h-4 w-4", isLoggingOut ? "animate-pulse" : "")} />
                       <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                     </button>
-                  </div>
+                  </motion.div>
                 ) : null}
+                </AnimatePresence>
               </div>
             </>
           ) : showGuestActions ? (

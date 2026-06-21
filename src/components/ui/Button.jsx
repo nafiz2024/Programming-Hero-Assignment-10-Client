@@ -30,7 +30,7 @@ export default function Button({
   return (
     <HeroButton
       className={clsx(
-        "pf-touch-target rounded-pill font-semibold transition duration-300 ease-out",
+        "pf-touch-target rounded-pill font-semibold transition duration-300 ease-out transform-gpu active:scale-[0.985] data-[hover=true]:-translate-y-0.5 data-[hover=true]:shadow-lg",
         variantClasses[variant] || variantClasses.solid,
         sizeClasses[size] || sizeClasses.md,
         className,

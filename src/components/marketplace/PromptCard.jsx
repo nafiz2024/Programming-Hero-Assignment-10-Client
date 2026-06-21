@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark, Copy, Star } from "lucide-react";
 
 import Button from "@/components/ui/Button";
@@ -37,8 +38,14 @@ export default function PromptCard({
   visibility,
   accent,
 }) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <article className="pf-card overflow-hidden rounded-xl p-3 md:p-4">
+    <motion.article
+      className="pf-card overflow-hidden rounded-xl p-3 md:p-4"
+      whileHover={shouldReduceMotion ? undefined : { y: -6, scale: 1.01 }}
+      whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
+    >
       <div className={`mb-4 h-36 rounded-xl bg-gradient-to-br ${accent}`} />
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -78,17 +85,19 @@ export default function PromptCard({
           <p className="text-body-xs text-muted">Prompt creator</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <motion.button
             className="pf-touch-target inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted transition hover:text-foreground"
             type="button"
+            whileHover={shouldReduceMotion ? undefined : { scale: 1.08 }}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
           >
             <Bookmark className="h-4 w-4" />
-          </button>
+          </motion.button>
           <Button as={Link} href={`/prompts/${id}`} size="sm" variant="secondary">
             View Details
           </Button>
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }

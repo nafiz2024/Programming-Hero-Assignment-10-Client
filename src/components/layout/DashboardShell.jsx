@@ -8,6 +8,7 @@ import { Menu, MoonStar, Plus, Search } from "lucide-react";
 import BottomNavigation from "@/components/layout/BottomNavigation";
 import DashboardSidebar from "@/components/layout/DashboardSidebar";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import FadeIn from "@/components/shared/FadeIn";
 import Button from "@/components/ui/Button";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -95,7 +96,9 @@ export default function DashboardShell({ children }) {
             </div>
           </header>
 
-          <main>{children}</main>
+          <main>
+            <FadeIn>{children}</FadeIn>
+          </main>
         </div>
       </div>
 

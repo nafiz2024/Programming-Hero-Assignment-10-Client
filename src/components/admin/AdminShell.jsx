@@ -5,6 +5,7 @@ import { Menu, CalendarDays, ChevronDown } from "lucide-react";
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import FadeIn from "@/components/shared/FadeIn";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -70,7 +71,9 @@ export default function AdminShell({ children }) {
             </div>
           </header>
 
-          <main>{children}</main>
+          <main>
+            <FadeIn>{children}</FadeIn>
+          </main>
         </div>
       </div>
 

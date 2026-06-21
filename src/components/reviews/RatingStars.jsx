@@ -1,5 +1,6 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import { Star } from "lucide-react";
 import clsx from "clsx";
 
@@ -18,6 +19,7 @@ export default function RatingStars({
 }) {
   const resolvedSize = sizeMap[size] || sizeMap.sm;
   const rounded = Math.round(rating);
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <div className={clsx("flex items-center gap-1 text-warning", className)}>
@@ -35,19 +37,29 @@ export default function RatingStars({
         );
 
         if (!interactive) {
-          return <span key={`review-star-${value}`}>{icon}</span>;
+          return (
+            <motion.span
+              animate={rating >= value || index < rounded ? { scale: [1, 1.04, 1] } : undefined}
+              key={`review-star-${value}`}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+            >
+              {icon}
+            </motion.span>
+          );
         }
 
         return (
-          <button
+          <motion.button
             key={`review-star-${value}`}
             aria-label={`Rate ${value} stars`}
             className="pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-warning transition hover:border-primary/30"
             onClick={() => onChange?.(value)}
             type="button"
+            whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.08 }}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
           >
             {icon}
-          </button>
+          </motion.button>
         );
       })}
     </div>

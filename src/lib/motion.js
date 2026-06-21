@@ -1,4 +1,5 @@
 export const motionDurations = {
+  instant: 0.2,
   fast: 0.3,
   base: 0.45,
   slow: 0.6,
@@ -69,6 +70,22 @@ export const motionPresets = {
       exit: { opacity: 0, scale: 0.96, y: 12 },
     },
     transition: { type: "spring", stiffness: 240, damping: 24, mass: 0.85 },
+  },
+  drawerSlide: {
+    variants: {
+      hidden: { opacity: 0, y: 36 },
+      visible: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: 20 },
+    },
+    transition: { duration: motionDurations.base, ease: easeOut },
+  },
+  dropdownScale: {
+    variants: {
+      hidden: { opacity: 0, scale: 0.96, y: -10 },
+      visible: { opacity: 1, scale: 1, y: 0 },
+      exit: { opacity: 0, scale: 0.98, y: -6 },
+    },
+    transition: { duration: motionDurations.instant, ease: easeOut },
   },
   dashboardCardStagger: {
     variants: {

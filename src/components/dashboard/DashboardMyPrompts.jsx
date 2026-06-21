@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Eye, Globe, Lock, MoreHorizontal, PencilLine, Search, Star, Trash2, TriangleAlert } from "lucide-react";
 
 import DashboardPageHeader from "@/components/dashboard/DashboardPageHeader";
@@ -42,8 +43,13 @@ function StatusBadge({ prompt }) {
 }
 
 function MobilePromptCard({ onDelete, onEdit, prompt }) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+    <motion.article
+      className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)]"
+      whileHover={shouldReduceMotion ? undefined : { y: -4 }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className={`h-16 w-20 rounded-[20px] bg-gradient-to-br ${prompt.accent}`} />
@@ -99,12 +105,13 @@ function MobilePromptCard({ onDelete, onEdit, prompt }) {
           Delete
         </Button>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
 export default function DashboardMyPrompts() {
   const { deleteOwnedPrompt, error, ownedPrompts, refreshDashboard, status, updateOwnedPrompt } = useDashboard();
+  const shouldReduceMotion = useReducedMotion();
   const [filters, setFilters] = useState({
     search: "",
     category: creatorPromptFilters.categories[0],
@@ -254,8 +261,14 @@ export default function DashboardMyPrompts() {
                       <span>Actions</span>
                     </div>
 
-                    {paginatedPrompts.map((prompt) => (
-                      <div key={prompt.id} className="border-t border-slate-100 bg-white">
+                    {paginatedPrompts.map((prompt, index) => (
+                      <motion.div
+                        animate={{ opacity: 1, y: 0 }}
+                        className="border-t border-slate-100 bg-white"
+                        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10 }}
+                        key={prompt.id}
+                        transition={{ duration: 0.24, delay: shouldReduceMotion ? 0 : index * 0.04, ease: "easeOut" }}
+                      >
                         <div className="grid grid-cols-[minmax(0,2fr)_0.9fr_0.75fr_0.75fr_0.6fr_0.75fr_0.8fr] gap-4 px-6 py-5">
                           <div className="flex items-center gap-4">
                             <div className={`h-14 w-16 rounded-2xl bg-gradient-to-br ${prompt.accent}`} />
@@ -300,7 +313,7 @@ export default function DashboardMyPrompts() {
                             </div>
                           </div>
                         ) : null}
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
 
