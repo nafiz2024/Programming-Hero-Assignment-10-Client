@@ -110,7 +110,7 @@ export function buildSocialCallbackUrl(pathname) {
 
 export function getGoogleSocialPayload(pathname) {
   if (!API_BASE_URL) {
-    throw new Error("NEXT_PUBLIC_API_URL is not configured.");
+    throw new Error("API URL is not configured.");
   }
 
   const callbackPath = `${pathname}?social=google`;
@@ -121,17 +121,4 @@ export function getGoogleSocialPayload(pathname) {
     callbackURL: buildSocialCallbackUrl(callbackPath),
     errorCallbackURL: buildSocialCallbackUrl(errorPath),
   };
-}
-
-export function getGoogleSocialRedirectUrl(pathname) {
-  if (!API_BASE_URL) {
-    throw new Error("API URL is not configured.");
-  }
-
-  const callbackUrl = encodeURIComponent(buildSocialCallbackUrl(`${pathname}?social=google`));
-  const errorCallbackUrl = encodeURIComponent(
-    buildSocialCallbackUrl(`${pathname}?social=google-error`),
-  );
-
-  return `${API_BASE_URL}/api/auth/sign-in/social?provider=google&callbackURL=${callbackUrl}&errorCallbackURL=${errorCallbackUrl}`;
 }
