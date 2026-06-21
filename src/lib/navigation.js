@@ -1,4 +1,6 @@
 import {
+  AlertTriangle,
+  BarChart3,
   Grid2x2,
   Heart,
   Home,
@@ -14,6 +16,14 @@ import {
   FileText,
   PlusSquare,
   BadgePlus,
+  Shield,
+  Users,
+  UserCog,
+  Boxes,
+  MessagesSquare,
+  Wallet,
+  Settings,
+  Flag,
 } from "lucide-react";
 
 export const primaryNavLinks = [
@@ -58,4 +68,27 @@ export const mobileCreatorNavLinks = [
   { href: "/creator/prompts", label: "Prompts", icon: FileText },
   { href: "/creator/prompts/new", label: "Create", icon: PlusSquare },
   { href: "/dashboard/profile", label: "Profile", icon: UserRound },
+];
+
+export const adminNavLinks = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin", label: "Users", icon: Users, disabled: true },
+  { href: "/admin", label: "Creators", icon: UserCog, disabled: true },
+  { href: "/admin", label: "Prompts", icon: Boxes, disabled: true },
+  { href: "/admin", label: "Reviews", icon: MessagesSquare, disabled: true },
+  { href: "/admin", label: "Categories", icon: Grid2x2, disabled: true },
+  { href: "/admin", label: "AI Tools", icon: Sparkles, disabled: true },
+  { href: "/admin", label: "Payments", icon: Wallet, disabled: true },
+  { href: "/admin", label: "Analytics", icon: BarChart3, disabled: true },
+  { href: "/admin/reports", label: "Reports", icon: Flag },
+  { href: "/admin", label: "Moderation", icon: Shield, disabled: true },
+  { href: "/admin", label: "Settings", icon: Settings, disabled: true },
+  { action: "logout", label: "Logout", icon: LogOut },
+];
+
+export const mobileAdminNavLinks = [
+  { href: "/admin", label: "Home", icon: Home },
+  { href: "/admin/reports", label: "Reports", icon: AlertTriangle },
+  { href: "/admin", label: "Analytics", icon: BarChart3 },
+  { href: "/admin", label: "Profile", icon: UserRound },
 ];

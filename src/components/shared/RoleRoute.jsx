@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import GlobalLoader from "@/components/ui/GlobalLoader";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function RoleRoute({ allowedRoles = [], children }) {
+export default function RoleRoute({ allowedRoles = [], children, redirectTo = "/" }) {
   const router = useRouter();
   const { user, loading, isAuthenticated } = useAuth();
   const userRole = user?.role;
@@ -23,9 +23,9 @@ export default function RoleRoute({ allowedRoles = [], children }) {
     }
 
     if (!isAllowed) {
-      router.replace("/");
+      router.replace(redirectTo);
     }
-  }, [isAllowed, isAuthenticated, loading, router]);
+  }, [isAllowed, isAuthenticated, loading, redirectTo, router]);
 
   if (loading) {
     return <GlobalLoader label="Checking access" />;
