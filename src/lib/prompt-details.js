@@ -14,9 +14,9 @@ const reviewFallbackAuthors = [
 
 export const reportReasonOptions = [
   "Inappropriate Content",
-  "Spam or Misleading",
-  "Copyright Concern",
-  "Low Quality Output",
+  "Spam",
+  "Copyright Violation",
+  "Misleading Prompt",
   "Other",
 ];
 

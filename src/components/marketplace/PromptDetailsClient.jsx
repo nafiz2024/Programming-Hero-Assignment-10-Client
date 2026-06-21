@@ -33,7 +33,6 @@ import Button from "@/components/ui/Button";
 import ErrorState from "@/components/ui/ErrorState";
 import PromptCard from "@/components/marketplace/PromptCard";
 import PromptDetailsSkeleton from "@/components/marketplace/PromptDetailsSkeleton";
-import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
 import SelectField from "@/components/ui/SelectField";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -186,7 +185,7 @@ export default function PromptDetailsClient({ promptId }) {
     deleteReview: false,
   });
   const [reportForm, setReportForm] = useState({
-    reason: reportReasonOptions[0],
+    reason: "",
     description: "",
   });
   const [relatedState, setRelatedState] = useState({
@@ -576,19 +575,24 @@ export default function PromptDetailsClient({ promptId }) {
       return;
     }
 
+    if (!reportForm.reason) {
+      toastWarning("Please select a reason for reporting.");
+      return;
+    }
+
     setActionState((currentState) => ({ ...currentState, report: true }));
 
     try {
-      await reportApi.createForPrompt(promptId, {
+      await reportApi.create(promptId, {
         reason: reportForm.reason,
         description: reportForm.description.trim(),
       });
       setReportForm({
-        reason: reportReasonOptions[0],
+        reason: "",
         description: "",
       });
       setIsReportOpen(false);
-      toastSuccess("Report submitted");
+      toastSuccess("Report submitted successfully");
     } catch (error) {
       toastError(error.message || "Unable to submit your report.");
     } finally {
@@ -1052,49 +1056,75 @@ export default function PromptDetailsClient({ promptId }) {
         </div>
       ) : null}
 
-      <ResponsiveDrawer isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} title="Report Prompt">
-        <form className="space-y-5" onSubmit={handleReportSubmit}>
-          <SelectField
-            label="Reason for reporting"
-            onChange={(event) =>
-              setReportForm((currentState) => ({
-                ...currentState,
-                reason: event.target.value,
-              }))
-            }
-            options={reportReasonOptions}
-            value={reportForm.reason}
-          />
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition focus-within:border-primary/50 focus-within:shadow-glow">
-            <label className="mb-3 block text-body-xs font-medium text-muted">Description (optional)</label>
-            <textarea
-              className="min-h-[160px] w-full resize-none bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted"
-              maxLength={300}
-              onChange={(event) =>
-                setReportForm((currentState) => ({
-                  ...currentState,
-                  description: event.target.value,
-                }))
-              }
-              placeholder="Provide more details about the issue..."
-              value={reportForm.description}
-            />
-            <div className="mt-3 text-right text-body-xs text-muted">
-              {reportForm.description.length}/300
+      {isReportOpen ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_36px_120px_rgba(15,23,42,0.18)]">
+            <div className="mb-6">
+              <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
+                Report Prompt
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Help us keep PromptFlow high quality by reporting problematic prompts.
+              </p>
             </div>
-          </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button onPress={() => setIsReportOpen(false)} type="button" variant="secondary">
-              Cancel
-            </Button>
-            <Button isLoading={actionState.report} type="submit" variant="danger">
-              Submit Report
-            </Button>
+            <form className="space-y-5" onSubmit={handleReportSubmit}>
+              <SelectField
+                label="Reason for reporting"
+                onChange={(event) =>
+                  setReportForm((currentState) => ({
+                    ...currentState,
+                    reason: event.target.value === "Select reason" ? "" : event.target.value,
+                  }))
+                }
+                options={["Select reason", ...reportReasonOptions]}
+                value={reportForm.reason || "Select reason"}
+              />
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition focus-within:border-primary/50 focus-within:shadow-glow">
+                <label className="mb-3 block text-body-xs font-medium text-slate-500">
+                  Description (optional)
+                </label>
+                <textarea
+                  className="min-h-[160px] w-full resize-none bg-transparent text-body-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  maxLength={300}
+                  onChange={(event) =>
+                    setReportForm((currentState) => ({
+                      ...currentState,
+                      description: event.target.value,
+                    }))
+                  }
+                  placeholder="Provide more details about the issue..."
+                  value={reportForm.description}
+                />
+                <div className="mt-3 text-right text-body-xs text-slate-500">
+                  {reportForm.description.length}/300
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  onPress={() => {
+                    setIsReportOpen(false);
+                    setReportForm({
+                      reason: "",
+                      description: "",
+                    });
+                  }}
+                  type="button"
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+                <Button isLoading={actionState.report} type="submit" variant="danger">
+                  Submit Report
+                </Button>
+              </div>
+            </form>
           </div>
-        </form>
-      </ResponsiveDrawer>
+        </div>
+      ) : null}
     </>
   );
 }
