@@ -118,6 +118,7 @@ function getPromptItem(payload) {
 
 export function normalizePromptDetails(payload) {
   const prompt = getPromptItem(payload);
+  const promptId = String(prompt?._id || prompt?.id || "");
   const creatorName =
     prompt?.creator?.name ||
     prompt?.creatorName ||
@@ -150,7 +151,8 @@ export function normalizePromptDetails(payload) {
   );
 
   return {
-    id: prompt?._id || prompt?.id || "",
+    id: promptId,
+    _id: promptId,
     title: prompt?.title || "Untitled Prompt",
     description:
       prompt?.description ||
@@ -171,7 +173,7 @@ export function normalizePromptDetails(payload) {
     thumbnail: prompt?.thumbnail || "",
     tags: Array.isArray(prompt?.tags) ? prompt.tags.map(toTitleCase) : [],
     creator: {
-      id: prompt?.creator?._id || prompt?.creatorId || "",
+      id: String(prompt?.creator?._id || prompt?.creatorId || ""),
       name: creatorName,
       email: creatorEmail,
       image:

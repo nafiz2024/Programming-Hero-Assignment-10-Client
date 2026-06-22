@@ -152,6 +152,7 @@ function getPromptItems(payload) {
 }
 
 export function normalizePromptItem(item, index = 0) {
+  const promptId = String(item?._id || item?.id || `prompt-${index}`);
   const category = item?.category?.name || item?.categoryName || item?.category || "General";
   const aiTool = item?.aiTool || item?.model || item?.tool || "ChatGPT";
   const difficulty = toTitleCase(item?.difficulty || item?.level || "Beginner");
@@ -167,7 +168,8 @@ export function normalizePromptItem(item, index = 0) {
   ];
 
   return {
-    id: item?._id || item?.id || `prompt-${index}`,
+    id: promptId,
+    _id: promptId,
     title: item?.title || item?.name || `Prompt ${index + 1}`,
     category: toTitleCase(category),
     aiTool: toTitleCase(aiTool),

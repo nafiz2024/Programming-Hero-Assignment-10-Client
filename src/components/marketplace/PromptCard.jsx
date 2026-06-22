@@ -33,15 +33,18 @@ export default function PromptCard({
   description,
   difficulty,
   id,
+  _id,
   aiTool,
   rating,
   title,
   visibility,
   accent,
 }) {
+  const promptId = String(_id || id || "");
   const shouldReduceMotion = useReducedMotion();
   const prompt = {
-    id,
+    id: promptId,
+    _id: promptId,
     title,
     category,
     aiTool,
@@ -111,7 +114,7 @@ export default function PromptCard({
           >
             <Bookmark className={`h-4 w-4 ${isBookmarked ? "fill-current text-foreground" : ""}`} />
           </motion.button>
-          <Button as={Link} href={`/prompts/${id}`} size="sm" variant="secondary">
+          <Button as={Link} href={`/prompts/${promptId}`} size="sm" variant="secondary">
             View Details
           </Button>
         </div>
