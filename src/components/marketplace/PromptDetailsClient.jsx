@@ -56,6 +56,13 @@ import {
   promptUsageSteps,
   reportReasonOptions,
 } from "@/lib/prompt-details";
+import {
+  dispatchReviewSync,
+  enrichPromptsWithReviewSummaries,
+  reviewBelongsToUser,
+  reviewMatchesPrompt,
+  summarizeReviews,
+} from "@/lib/reviews";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
 
 function formatDate(value, options = { month: "short", day: "numeric", year: "numeric" }) {
@@ -213,7 +220,7 @@ export default function PromptDetailsClient({ promptId }) {
       ? storedReviews.filter((review) => String(review.promptId) !== String(promptId))
       : [];
     const latestForPrompt = nextReviews
-      .filter((review) => String(review.promptId) === String(promptId))
+      .filter((review) => reviewMatchesPrompt(review, promptId))
       .map((review) => ({
         id: review.id,
         promptId: review.promptId || promptId,
@@ -221,7 +228,8 @@ export default function PromptDetailsClient({ promptId }) {
         rating: Number(review.rating || 0),
         comment: review.comment || "",
         createdAt: review.createdAt || new Date().toISOString(),
-        authorId: review.authorId || user?.id || "",
+        authorId: review.authorId || review.userId || user?.id || "",
+        userId: review.userId || review.authorId || user?.id || "",
         authorEmail: review.authorEmail || user?.email || "",
         source: review.source || "api",
       }));
@@ -269,13 +277,17 @@ export default function PromptDetailsClient({ promptId }) {
   async function loadReviews() {
     setReviewState((currentState) => ({
       ...currentState,
-      status: currentState.items.length > 0 ? "success" : "loading",
+      status: "loading",
+      items: [],
       error: "",
     }));
 
     try {
       const response = await reviewApi.getByPrompt(promptId);
-      const normalized = normalizeReviewsPayload(response);
+      const normalized = normalizeReviewsPayload(response, {
+        promptId,
+        promptTitle: prompt?.title || "PromptFlow prompt",
+      });
 
       setReviewState({
         status: "success",
@@ -371,7 +383,7 @@ export default function PromptDetailsClient({ promptId }) {
           "from-cyan-500/26 via-sky-500/12 to-transparent",
         ];
 
-        const related = items
+        const relatedBase = items
           .filter((item) => String(item?._id || item?.id) !== String(promptId))
           .map((item, index) => ({
             id: item?._id || item?.id || `related-${index}`,
@@ -385,7 +397,9 @@ export default function PromptDetailsClient({ promptId }) {
             copyCount: Number(item?.copyCount || item?.copies || 0),
             author: item?.creatorName || item?.creator?.name || item?.author?.name || "PromptFlow Creator",
             description: item?.description || item?.summary || "Related prompt from the PromptFlow marketplace.",
-          }))
+          }));
+        const relatedWithReviews = await enrichPromptsWithReviewSummaries(relatedBase);
+        const related = relatedWithReviews
           .sort((left, right) => {
             const leftScore =
               (left.category === prompt?.category ? 2 : 0) +
@@ -440,23 +454,15 @@ export default function PromptDetailsClient({ promptId }) {
   }, [prompt?.aiTool, prompt?.category, prompt?.description, prompt?.id, prompt?.title, refreshViewedPrompts, user?.id]);
 
   const reviewSummary = useMemo(
-    () => ({
-      averageRating:
-        reviewState.totalReviews > 0 ? reviewState.averageRating : prompt?.rating || 0,
-      totalReviews:
-        reviewState.totalReviews > 0 ? reviewState.totalReviews : prompt?.reviewCount || 0,
-      distribution: reviewState.distribution,
-    }),
-    [prompt?.rating, prompt?.reviewCount, reviewState],
+    () => summarizeReviews(reviewState.items.filter((review) => reviewMatchesPrompt(review, promptId))),
+    [promptId, reviewState.items],
+  );
+  const reviewsForThisPrompt = useMemo(
+    () => reviewState.items.filter((review) => reviewMatchesPrompt(review, promptId)),
+    [promptId, reviewState.items],
   );
   const currentUserReview =
-    reviewState.items.find(
-      (review) =>
-        (user?.id && review.authorId && String(user.id) === String(review.authorId)) ||
-        (user?.email &&
-          review.authorEmail &&
-          String(user.email).toLowerCase() === String(review.authorEmail).toLowerCase()),
-    ) || null;
+    reviewsForThisPrompt.find((review) => reviewBelongsToUser(review, user)) || null;
 
   async function handleCopy() {
     if (!prompt || isPromptLocked) {
@@ -545,11 +551,16 @@ export default function PromptDetailsClient({ promptId }) {
 
     try {
       await reviewApi.createOrUpdate(promptId, {
+        promptId,
         rating: Number(values.rating),
         comment: values.comment.trim(),
       });
+      await loadPrompt();
       const nextReviewResponse = await reviewApi.getByPrompt(promptId);
-      const normalized = normalizeReviewsPayload(nextReviewResponse);
+      const normalized = normalizeReviewsPayload(nextReviewResponse, {
+        promptId,
+        promptTitle: prompt?.title || "PromptFlow prompt",
+      });
       setReviewState({
         status: "success",
         ...normalized,
@@ -557,6 +568,7 @@ export default function PromptDetailsClient({ promptId }) {
       });
       applyReviewSummaryToPrompt(normalized);
       syncDashboardReviewsLocally(normalized.items);
+      dispatchReviewSync(promptId);
       toastSuccess(currentUserReview ? "Review updated" : "Review submitted");
     } catch (error) {
       toastError(error.message || "Unable to submit your review.");
@@ -576,8 +588,12 @@ export default function PromptDetailsClient({ promptId }) {
       await reviewApi.removeForPrompt(promptId, {
         reviewId: pendingReviewDeletion.id,
       });
+      await loadPrompt();
       const nextReviewResponse = await reviewApi.getByPrompt(promptId);
-      const normalized = normalizeReviewsPayload(nextReviewResponse);
+      const normalized = normalizeReviewsPayload(nextReviewResponse, {
+        promptId,
+        promptTitle: prompt?.title || "PromptFlow prompt",
+      });
       setReviewState({
         status: "success",
         ...normalized,
@@ -585,6 +601,7 @@ export default function PromptDetailsClient({ promptId }) {
       });
       applyReviewSummaryToPrompt(normalized);
       syncDashboardReviewsLocally(normalized.items);
+      dispatchReviewSync(promptId);
       setPendingReviewDeletion(null);
       toastSuccess("Review deleted");
     } catch (error) {
@@ -931,7 +948,7 @@ export default function PromptDetailsClient({ promptId }) {
 
                     <div ref={reviewFormRef}>
                       <ReviewForm
-                        key={currentUserReview ? `${currentUserReview.id}-${currentUserReview.updatedAt || currentUserReview.comment}` : "new-review"}
+                        key={currentUserReview ? `${promptId}-${currentUserReview.id}-${currentUserReview.updatedAt || currentUserReview.comment}` : `${promptId}-new-review`}
                         existingReview={currentUserReview}
                         isAuthenticated={isAuthenticated}
                         isSubmitting={actionState.review}
@@ -955,7 +972,7 @@ export default function PromptDetailsClient({ promptId }) {
                     }}
                     onLoadMore={() => setVisibleReviews((currentValue) => currentValue + 3)}
                     onRetry={loadReviews}
-                    reviews={reviewState.items}
+                    reviews={reviewsForThisPrompt}
                     status={reviewState.status}
                     visibleCount={visibleReviews}
                   />

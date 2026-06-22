@@ -20,12 +20,11 @@ import {
   normalizeDashboardUser,
   normalizeDashboardPromptResponse,
   normalizeOwnedPrompts,
-  seedLocalReviews,
-  saveDashboardReviews,
   setStorageItem,
   toDashboardPromptPayload,
 } from "@/lib/dashboard";
 import { normalizePromptPayload } from "@/lib/marketplace";
+import { enrichPromptsWithReviewSummaries, fetchUserReviewsForPrompts, REVIEW_SYNC_EVENT } from "@/lib/reviews";
 
 export const DashboardContext = createContext(undefined);
 
@@ -55,22 +54,14 @@ export function DashboardProvider({ children }) {
       ]);
 
       const profileOverrides = getStorageItem(getProfileStorageKey(), {});
-      const promptCatalog = normalizePromptPayload(promptsResponse);
+      const promptCatalog = await enrichPromptsWithReviewSummaries(normalizePromptPayload(promptsResponse));
       const normalizedBookmarks =
         Array.isArray(bookmarksResponse) && bookmarksResponse.length > 0
           ? bookmarksResponse
           : normalizeBookmarks(bookmarksResponse, promptCatalog);
       const normalizedUser = normalizeDashboardUser(userResponse, profileOverrides);
       const ownedPrompts = normalizeOwnedPrompts(promptsResponse, normalizedUser);
-      const persistedReviews = getStorageItem(getReviewsStorageKey(), null);
-      const localReviews =
-        Array.isArray(persistedReviews) && persistedReviews.length > 0
-          ? persistedReviews
-          : seedLocalReviews(normalizedUser, normalizedBookmarks, ownedPrompts.length > 0 ? ownedPrompts : promptCatalog);
-
-      if (!persistedReviews) {
-        saveDashboardReviews(localReviews);
-      }
+      const localReviews = await fetchUserReviewsForPrompts(promptCatalog, normalizedUser);
 
       setState({
         status: "success",
@@ -107,11 +98,13 @@ export function DashboardProvider({ children }) {
 
     window.addEventListener("storage", syncStoredReviews);
     window.addEventListener(DASHBOARD_REVIEWS_EVENT, syncStoredReviews);
+    window.addEventListener(REVIEW_SYNC_EVENT, refreshDashboard);
 
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener("storage", syncStoredReviews);
       window.removeEventListener(DASHBOARD_REVIEWS_EVENT, syncStoredReviews);
+      window.removeEventListener(REVIEW_SYNC_EVENT, refreshDashboard);
     };
   }, [refreshDashboard]);
 

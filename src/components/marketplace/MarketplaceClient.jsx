@@ -26,6 +26,7 @@ import {
   normalizePromptPayload,
   sortPrompts,
 } from "@/lib/marketplace";
+import { enrichPromptsWithReviewSummaries, REVIEW_SYNC_EVENT } from "@/lib/reviews";
 
 const PAGE_SIZE = 6;
 
@@ -90,7 +91,7 @@ export default function MarketplaceClient() {
 
     try {
       const response = await promptApi.getAll();
-      const normalizedPrompts = normalizePromptPayload(response);
+      const normalizedPrompts = await enrichPromptsWithReviewSummaries(normalizePromptPayload(response));
 
       setPromptState({
         status: "success",
@@ -112,7 +113,7 @@ export default function MarketplaceClient() {
     async function fetchPrompts() {
       try {
         const response = await promptApi.getAll();
-        const normalizedPrompts = normalizePromptPayload(response);
+        const normalizedPrompts = await enrichPromptsWithReviewSummaries(normalizePromptPayload(response));
 
         if (isMounted) {
           setPromptState({
@@ -134,8 +135,15 @@ export default function MarketplaceClient() {
 
     fetchPrompts();
 
+    function handleReviewSync() {
+      fetchPrompts();
+    }
+
+    window.addEventListener(REVIEW_SYNC_EVENT, handleReviewSync);
+
     return () => {
       isMounted = false;
+      window.removeEventListener(REVIEW_SYNC_EVENT, handleReviewSync);
     };
   }, []);
 

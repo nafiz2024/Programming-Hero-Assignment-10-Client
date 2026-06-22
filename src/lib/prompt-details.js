@@ -211,7 +211,7 @@ function extractReviewItems(payload) {
   return [];
 }
 
-export function normalizeReviewsPayload(payload) {
+export function normalizeReviewsPayload(payload, options = {}) {
   const items = extractReviewItems(payload).map((review, index) => {
     const authorName =
       review?.user?.name ||
@@ -220,17 +220,38 @@ export function normalizeReviewsPayload(payload) {
       review?.name ||
       reviewFallbackAuthors[index % reviewFallbackAuthors.length];
     const rating = Math.min(5, Math.max(1, parseNumber(review?.rating, 5)));
+    const promptId =
+      review?.promptId ||
+      review?.prompt?._id ||
+      review?.prompt?.id ||
+      review?.prompt ||
+      payload?.promptId ||
+      payload?.prompt?._id ||
+      payload?.prompt?.id ||
+      options.promptId ||
+      "";
+    const promptTitle =
+      review?.promptTitle ||
+      review?.prompt?.title ||
+      payload?.promptTitle ||
+      payload?.prompt?.title ||
+      options.promptTitle ||
+      "PromptFlow prompt";
+    const authorId =
+      review?.user?._id ||
+      review?.user?.id ||
+      review?.author?._id ||
+      review?.author?.id ||
+      review?.userId ||
+      review?.reviewerId ||
+      "";
 
     return {
       id: review?._id || review?.id || `review-${index}`,
-      authorId:
-        review?.user?._id ||
-        review?.user?.id ||
-        review?.author?._id ||
-        review?.author?.id ||
-        review?.userId ||
-        review?.reviewerId ||
-        "",
+      promptId: String(promptId || ""),
+      promptTitle,
+      userId: String(authorId || ""),
+      authorId: String(authorId || ""),
       authorName,
       authorEmail:
         review?.user?.email ||

@@ -10,9 +10,11 @@ import DashboardSkeleton from "@/components/ui/DashboardSkeleton";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import ResponsiveDrawer from "@/components/ui/ResponsiveDrawer";
+import { reviewApi } from "@/lib/api";
 import { useDashboard } from "@/hooks/useDashboard";
 import { formatDashboardDate } from "@/lib/dashboard";
-import { toastSuccess } from "@/lib/toast";
+import { dispatchReviewSync } from "@/lib/reviews";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 function ReviewStars({ rating, onSelect }) {
   return (
@@ -36,8 +38,10 @@ function ReviewStars({ rating, onSelect }) {
 }
 
 export default function DashboardReviews() {
-  const { error, localReviews, refreshDashboard, status, updateReviewsLocally } = useDashboard();
+  const { error, localReviews, refreshDashboard, status } = useDashboard();
   const [activeReview, setActiveReview] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingReviewId, setDeletingReviewId] = useState("");
   const [form, setForm] = useState({
     rating: 5,
     comment: "",
@@ -51,27 +55,43 @@ export default function DashboardReviews() {
     });
   }
 
-  function handleSave() {
-    const nextReviews = localReviews.map((review) =>
-      review.id === activeReview.id
-        ? {
-            ...review,
-            rating: form.rating,
-            comment: form.comment,
-            createdAt: new Date().toISOString(),
-          }
-        : review,
-    );
+  async function handleSave() {
+    if (!activeReview) {
+      return;
+    }
 
-    updateReviewsLocally(nextReviews);
-    setActiveReview(null);
-    toastSuccess("Review updated locally");
+    setIsSaving(true);
+
+    try {
+      await reviewApi.createOrUpdate(activeReview.promptId, {
+        promptId: activeReview.promptId,
+        rating: form.rating,
+        comment: form.comment.trim(),
+      });
+      dispatchReviewSync(activeReview.promptId);
+      await refreshDashboard();
+      setActiveReview(null);
+      toastSuccess("Review updated");
+    } catch (error) {
+      toastError(error.message || "Unable to update your review.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  function handleDelete(reviewId) {
-    const nextReviews = localReviews.filter((review) => review.id !== reviewId);
-    updateReviewsLocally(nextReviews);
-    toastSuccess("Review removed locally");
+  async function handleDelete(review) {
+    setDeletingReviewId(review.id);
+
+    try {
+      await reviewApi.remove(review.promptId);
+      dispatchReviewSync(review.promptId);
+      await refreshDashboard();
+      toastSuccess("Review removed");
+    } catch (error) {
+      toastError(error.message || "Unable to delete your review.");
+    } finally {
+      setDeletingReviewId("");
+    }
   }
 
   if (status === "loading") {
@@ -85,13 +105,13 @@ export default function DashboardReviews() {
   return (
     <>
       <div className="space-y-6">
-        <DashboardPageHeader crumbs={["Dashboard", "My Reviews"]} description="Your review history is managed locally until a user review endpoint is available." title="My Reviews" />
+        <DashboardPageHeader crumbs={["Dashboard", "My Reviews"]} description="Your review history across prompts." title="My Reviews" />
 
         <MotionReveal preset="viewportReveal">
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-6">
             {localReviews.length === 0 ? (
               <EmptyState
-                description="No local review entries exist yet. Once user review APIs are available, this page can connect directly."
+                description="You haven't reviewed any prompts yet."
                 title="No reviews to show"
               />
             ) : (
@@ -123,7 +143,7 @@ export default function DashboardReviews() {
                           <PencilLine className="h-4 w-4" />
                           Edit
                         </Button>
-                        <Button onPress={() => handleDelete(review.id)} size="sm" variant="danger">
+                        <Button isLoading={deletingReviewId === review.id} onPress={() => handleDelete(review)} size="sm" variant="danger">
                           <Trash2 className="h-4 w-4" />
                           Delete
                         </Button>
@@ -161,7 +181,7 @@ export default function DashboardReviews() {
             >
               Cancel
             </Button>
-            <Button onPress={handleSave}>Save Review</Button>
+            <Button isLoading={isSaving} onPress={handleSave}>Save Review</Button>
           </div>
         </div>
       </ResponsiveDrawer>
