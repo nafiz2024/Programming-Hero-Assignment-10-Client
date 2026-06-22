@@ -34,7 +34,7 @@ import {
   normalizeAdminUsers,
   paginateItems,
 } from "@/lib/admin";
-import { toastError, toastSuccess } from "@/lib/toast";
+import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
 
 const PAGE_SIZE = 10;
 
@@ -225,6 +225,8 @@ function RoleModal({ onClose, onSubmit, role, setRole, user, isSubmitting }) {
     return null;
   }
 
+  const hasChangedRole = String(role || "").toLowerCase() !== String(user.role || "").toLowerCase();
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_36px_120px_rgba(15,23,42,0.18)]">
@@ -291,7 +293,7 @@ function RoleModal({ onClose, onSubmit, role, setRole, user, isSubmitting }) {
           <Button onPress={onClose} variant="secondary">
             Cancel
           </Button>
-          <Button isLoading={isSubmitting} onPress={onSubmit}>
+          <Button disabled={!hasChangedRole} isLoading={isSubmitting} onPress={onSubmit}>
             Update Role
           </Button>
         </div>
@@ -497,13 +499,27 @@ export default function AdminUserManagement({ mode = "users" }) {
       return;
     }
 
+    if (String(nextRole || "").toLowerCase() === String(roleTarget.role || "").toLowerCase()) {
+      toastWarning("Please choose a different role before updating.");
+      return;
+    }
+
     setActionState((current) => ({ ...current, role: true }));
 
     try {
-      await adminApi.updateUserRole(roleTarget.id, { role: nextRole.toLowerCase() });
+      const response = await adminApi.updateUserRole(roleTarget.id, { role: nextRole.toLowerCase() });
+      const updatedUsers = normalizeAdminUsers({
+        users: state.users.map((user) =>
+          user.id === roleTarget.id ? { ...user, ...(response?.user || {}), role: nextRole } : user,
+        ),
+      });
+
+      setState((current) => ({
+        ...current,
+        users: updatedUsers,
+      }));
       toastSuccess("User role updated successfully");
       setRoleTarget(null);
-      await loadUsers();
     } catch (error) {
       toastError(error.message || "Unable to update this role.");
     } finally {

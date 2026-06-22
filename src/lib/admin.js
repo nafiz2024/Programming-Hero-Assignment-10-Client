@@ -91,7 +91,7 @@ function getSubscriptionLabel(value, fallbackIndex = 0) {
   return "Free";
 }
 
-function getUserStatusLabel(item, fallbackIndex = 0) {
+function getUserStatusLabel(item) {
   if (typeof item?.isActive === "boolean") {
     return item.isActive ? "Active" : "Inactive";
   }
@@ -115,14 +115,14 @@ function getUserStatusLabel(item, fallbackIndex = 0) {
     return "Active";
   }
 
-  return fallbackIndex % 6 === 0 ? "Pending" : "Active";
+  return "Active";
 }
 
 function formatDateString(value) {
   const date = value ? new Date(value) : null;
 
   if (!date || Number.isNaN(date.getTime())) {
-    return "May 30, 2024";
+    return "Not available";
   }
 
   return new Intl.DateTimeFormat("en-US", {
@@ -132,7 +132,7 @@ function formatDateString(value) {
   }).format(date);
 }
 
-function derivePromptCount(item, index) {
+function derivePromptCount(item) {
   return parseNumber(
     item?.totalPrompts ||
       item?.promptCount ||
@@ -142,11 +142,11 @@ function derivePromptCount(item, index) {
       item?.metrics?.totalPrompts ||
       item?.myPromptsCount ||
       item?.submittedPrompts,
-    3 + ((index * 5) % 48),
+    0,
   );
 }
 
-function deriveApprovedPromptCount(item, totalPrompts, index) {
+function deriveApprovedPromptCount(item, totalPrompts) {
   const explicit = parseNumber(
     item?.approvedPrompts ||
       item?.approvedPromptCount ||
@@ -159,10 +159,10 @@ function deriveApprovedPromptCount(item, totalPrompts, index) {
     return explicit;
   }
 
-  return Math.max(0, totalPrompts - ((index % 4) + (totalPrompts > 0 ? 1 : 0)));
+  return totalPrompts;
 }
 
-function deriveCopiesCount(item, totalPrompts, index) {
+function deriveCopiesCount(item) {
   const explicit = parseNumber(
     item?.totalCopies ||
       item?.copiesCount ||
@@ -177,10 +177,10 @@ function deriveCopiesCount(item, totalPrompts, index) {
     return explicit;
   }
 
-  return totalPrompts * 28 + index * 19 + 24;
+  return 0;
 }
 
-function deriveAverageRating(item, index) {
+function deriveAverageRating(item) {
   const explicit = parseNumber(
     item?.averageRating ||
       item?.avgRating ||
@@ -194,10 +194,10 @@ function deriveAverageRating(item, index) {
     return Math.min(5, explicit);
   }
 
-  return Number((4.1 + ((index % 8) * 0.11)).toFixed(1));
+  return 0;
 }
 
-function deriveTotalReviews(item, totalPrompts, index) {
+function deriveTotalReviews(item) {
   const explicit = parseNumber(
     item?.totalReviews ||
       item?.reviewCount ||
@@ -210,7 +210,7 @@ function deriveTotalReviews(item, totalPrompts, index) {
     return explicit;
   }
 
-  return Math.max(1, Math.round(totalPrompts * 0.8) + (index % 5));
+  return 0;
 }
 
 function getPromptVisibilityLabel(value) {
@@ -417,11 +417,11 @@ export function normalizeAdminUsers(payload) {
 
   return items.map((item, index) => {
     const role = getUserRoleLabel(item?.role || item?.userRole || item?.type);
-    const totalPrompts = derivePromptCount(item, index);
-    const approvedPrompts = deriveApprovedPromptCount(item, totalPrompts, index);
-    const totalCopies = deriveCopiesCount(item, totalPrompts, index);
-    const averageRating = deriveAverageRating(item, index);
-    const totalReviews = deriveTotalReviews(item, totalPrompts, index);
+    const totalPrompts = derivePromptCount(item);
+    const approvedPrompts = deriveApprovedPromptCount(item, totalPrompts);
+    const totalCopies = deriveCopiesCount(item);
+    const averageRating = deriveAverageRating(item);
+    const totalReviews = deriveTotalReviews(item);
     const name = item?.name || item?.fullName || item?.username || `User ${index + 1}`;
     const email = item?.email || formatEmailFromName(name);
     const subscription = getSubscriptionLabel(
@@ -432,18 +432,19 @@ export function normalizeAdminUsers(payload) {
         item?.billing?.plan,
       index,
     );
-    const status = getUserStatusLabel(item, index);
+    const status = getUserStatusLabel(item);
     const joinedSource = item?.createdAt || item?.joinedAt || item?.memberSince || item?.dateJoined;
 
     return {
-      id: item?._id || item?.id || `user-${index}`,
+      id: String(item?._id || item?.id || `user-${index}`),
+      _id: String(item?._id || item?.id || `user-${index}`),
       name,
       email,
       role,
       subscription,
       status,
-      joinedAt: joinedSource || new Date(2024, 4, 30 - (index % 18)).toISOString(),
-      joinedLabel: formatDateString(joinedSource || new Date(2024, 4, 30 - (index % 18))),
+      joinedAt: joinedSource || "",
+      joinedLabel: formatDateString(joinedSource),
       totalPrompts,
       approvedPrompts,
       totalCopies,
