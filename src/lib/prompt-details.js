@@ -255,16 +255,15 @@ export function normalizeReviewsPayload(payload) {
     };
   });
 
-  const totalReviews = parseNumber(payload?.totalReviews || payload?.count || items.length, items.length);
-  const averageRating =
-    parseNumber(payload?.averageRating || payload?.avgRating || payload?.rating, 0) ||
-    (items.length > 0 ? items.reduce((sum, item) => sum + item.rating, 0) / items.length : 0);
+  const calculatedTotalReviews = items.length;
+  const calculatedAverageRating = calculatedTotalReviews > 0
+    ? Number((items.reduce((sum, item) => sum + item.rating, 0) / calculatedTotalReviews).toFixed(2))
+    : 0;
+  const totalReviews = parseNumber(payload?.totalReviews, calculatedTotalReviews);
+  const averageRating = parseNumber(payload?.averageRating, calculatedAverageRating);
   const distribution = [5, 4, 3, 2, 1].map((star) => ({
     star,
-    count:
-      parseNumber(payload?.distribution?.[star] || payload?.ratingDistribution?.[star], -1) >= 0
-        ? parseNumber(payload?.distribution?.[star] || payload?.ratingDistribution?.[star], 0)
-        : items.filter((item) => item.rating === star).length,
+    count: items.filter((item) => item.rating === star).length,
   }));
 
   return {

@@ -70,14 +70,6 @@ function formatDate(value, options = { month: "short", day: "numeric", year: "nu
   }
 }
 
-async function submitPromptReport(promptId, payload) {
-  try {
-    return await reportApi.create(promptId, payload);
-  } catch {
-    return reportApi.createForPrompt(promptId, payload);
-  }
-}
-
 function MetaStat({ icon: Icon, label, value }) {
   return (
     <div className="inline-flex items-center gap-2 rounded-pill border border-white/10 bg-white/[0.05] px-3 py-2 text-body-sm text-muted">
@@ -237,6 +229,19 @@ export default function PromptDetailsClient({ promptId }) {
     saveDashboardReviews([...latestForPrompt, ...filteredReviews]);
   }
 
+  function applyReviewSummaryToPrompt(normalizedReviews) {
+    setPromptState((currentState) => ({
+      ...currentState,
+      item: currentState.item
+        ? {
+            ...currentState.item,
+            rating: normalizedReviews.averageRating,
+            reviewCount: normalizedReviews.totalReviews,
+          }
+        : currentState.item,
+    }));
+  }
+
   async function loadPrompt() {
     setPromptState((currentState) => ({
       ...currentState,
@@ -277,6 +282,7 @@ export default function PromptDetailsClient({ promptId }) {
         ...normalized,
         error: "",
       });
+      applyReviewSummaryToPrompt(normalized);
     } catch (error) {
       setReviewState({
         status: "error",
@@ -317,11 +323,13 @@ export default function PromptDetailsClient({ promptId }) {
       }
 
       if (reviewResult.status === "fulfilled") {
+        const normalizedReviews = normalizeReviewsPayload(reviewResult.value);
         setReviewState({
           status: "success",
-          ...normalizeReviewsPayload(reviewResult.value),
+          ...normalizedReviews,
           error: "",
         });
+        applyReviewSummaryToPrompt(normalizedReviews);
       } else {
         setReviewState({
           status: "error",
@@ -547,6 +555,7 @@ export default function PromptDetailsClient({ promptId }) {
         ...normalized,
         error: "",
       });
+      applyReviewSummaryToPrompt(normalized);
       syncDashboardReviewsLocally(normalized.items);
       toastSuccess(currentUserReview ? "Review updated" : "Review submitted");
     } catch (error) {
@@ -574,6 +583,7 @@ export default function PromptDetailsClient({ promptId }) {
         ...normalized,
         error: "",
       });
+      applyReviewSummaryToPrompt(normalized);
       syncDashboardReviewsLocally(normalized.items);
       setPendingReviewDeletion(null);
       toastSuccess("Review deleted");
@@ -600,7 +610,8 @@ export default function PromptDetailsClient({ promptId }) {
     setActionState((currentState) => ({ ...currentState, report: true }));
 
     try {
-      await submitPromptReport(promptId, {
+      await reportApi.create(promptId, {
+        promptId,
         reason: reportForm.reason,
         description: reportForm.description.trim(),
       });

@@ -256,14 +256,10 @@ export const reportApi = {
   create(promptId, payload) {
     return apiRequest(`/api/reports/${promptId}`, {
       method: "POST",
-      body: payload,
-    });
-  },
-
-  createForPrompt(promptId, payload) {
-    return apiRequest(`/api/prompts/${promptId}/report`, {
-      method: "POST",
-      body: payload,
+      body: {
+        promptId,
+        ...payload,
+      },
     });
   },
 };
