@@ -8,6 +8,7 @@ import { useEffect, useMemo } from "react";
 import ErrorState from "@/components/common/ErrorState";
 import MarketingChrome from "@/components/layout/MarketingChrome";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { BookmarksProvider } from "@/providers/BookmarksProvider";
 import { NotificationsProvider } from "@/providers/NotificationsProvider";
 import { UIProvider } from "@/providers/UIProvider";
 
@@ -48,13 +49,15 @@ export default function GlobalError({ error, reset, unstable_retry: unstableRetr
     <html className={geist.className} data-scroll-behavior="smooth" lang="en" suppressHydrationWarning>
       <body className="bg-background text-foreground" suppressHydrationWarning>
         <AuthProvider>
-          <NotificationsProvider>
-            <UIProvider>
-              <MarketingChrome>
-                <ErrorState code={errorCode} onRetry={handleRetry} />
-              </MarketingChrome>
-            </UIProvider>
-          </NotificationsProvider>
+          <BookmarksProvider>
+            <NotificationsProvider>
+              <UIProvider>
+                <MarketingChrome>
+                  <ErrorState code={errorCode} onRetry={handleRetry} />
+                </MarketingChrome>
+              </UIProvider>
+            </NotificationsProvider>
+          </BookmarksProvider>
         </AuthProvider>
       </body>
     </html>

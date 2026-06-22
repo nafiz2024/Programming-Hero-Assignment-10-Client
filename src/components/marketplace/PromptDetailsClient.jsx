@@ -38,8 +38,9 @@ import PromptDetailsSkeleton from "@/components/marketplace/PromptDetailsSkeleto
 import SelectField from "@/components/ui/SelectField";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/hooks/useAuth";
+import { usePromptBookmark } from "@/hooks/usePromptBookmark";
 import { useNotifications } from "@/hooks/useNotifications";
-import { bookmarkApi, promptApi, reportApi, reviewApi } from "@/lib/api";
+import { promptApi, reportApi, reviewApi } from "@/lib/api";
 import {
   getReviewsStorageKey,
   getStorageItem,
@@ -66,38 +67,6 @@ function formatDate(value, options = { month: "short", day: "numeric", year: "nu
     return new Intl.DateTimeFormat("en-US", options).format(new Date(value));
   } catch {
     return "Not available";
-  }
-}
-
-function getBookmarkIds(payload) {
-  const items = Array.isArray(payload)
-    ? payload
-    : Array.isArray(payload?.bookmarks)
-    ? payload.bookmarks
-    : Array.isArray(payload?.data)
-    ? payload.data
-    : [];
-
-  return new Set(
-    items
-      .map((item) => item?.prompt?._id || item?.promptId || item?._id || item?.id)
-      .filter(Boolean),
-  );
-}
-
-async function syncBookmarkMutation(promptId, shouldBookmark) {
-  try {
-    if (shouldBookmark) {
-      return await promptApi.bookmark(promptId);
-    }
-
-    return await promptApi.unbookmark(promptId);
-  } catch (primaryError) {
-    if (shouldBookmark) {
-      return bookmarkApi.create({ promptId });
-    }
-
-    return bookmarkApi.remove(promptId);
   }
 }
 
@@ -193,7 +162,7 @@ function UsageCard({ index, title, description }) {
 }
 
 export default function PromptDetailsClient({ promptId }) {
-  const { isAuthenticated, loading: authLoading, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { refreshViewedPrompts } = useNotifications();
   const pathname = usePathname();
   const [promptState, setPromptState] = useState({
@@ -209,8 +178,6 @@ export default function PromptDetailsClient({ promptId }) {
     distribution: [],
     error: "",
   });
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isBookmarkReady, setIsBookmarkReady] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [actionState, setActionState] = useState({
@@ -234,6 +201,12 @@ export default function PromptDetailsClient({ promptId }) {
   const reviewFormRef = useRef(null);
   const shouldReduceMotion = useReducedMotion();
   const prompt = promptState.item;
+  const {
+    handleBookmarkToggle: togglePromptBookmark,
+    isBookmarked,
+    isBookmarkLoading,
+    isBookmarkReady,
+  } = usePromptBookmark(prompt);
   const isPremiumUser = isPremiumSubscription(user?.subscription);
   const isPromptLocked = Boolean(prompt?.locked && !isPremiumUser);
   const paymentHref = `/payment?returnTo=${encodeURIComponent(pathname || `/prompts/${promptId}`)}`;
@@ -444,45 +417,6 @@ export default function PromptDetailsClient({ promptId }) {
   }, [prompt?.aiTool, prompt?.category, promptId]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadBookmarks() {
-      if (authLoading) {
-        return;
-      }
-
-      if (!isAuthenticated) {
-        if (isMounted) {
-          setIsBookmarked(false);
-          setIsBookmarkReady(true);
-        }
-        return;
-      }
-
-      try {
-        const response = await bookmarkApi.getAll();
-        const bookmarkIds = getBookmarkIds(response);
-
-        if (isMounted) {
-          setIsBookmarked(bookmarkIds.has(promptId));
-          setIsBookmarkReady(true);
-        }
-      } catch {
-        if (isMounted) {
-          setIsBookmarked(false);
-          setIsBookmarkReady(true);
-        }
-      }
-    }
-
-    loadBookmarks();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [authLoading, isAuthenticated, promptId]);
-
-  useEffect(() => {
     if (!prompt?.id) {
       return;
     }
@@ -555,29 +489,15 @@ export default function PromptDetailsClient({ promptId }) {
     }
   }
 
-  async function handleBookmarkToggle() {
+  async function handleBookmarkToggle(event) {
     if (!prompt) {
       return;
     }
 
-    if (!isAuthenticated) {
-      toastWarning("Please log in to bookmark prompts.");
-      return;
-    }
+    const result = await togglePromptBookmark(event);
 
-    setActionState((currentState) => ({ ...currentState, bookmark: true }));
-    const nextValue = !isBookmarked;
-    setIsBookmarked(nextValue);
-
-    try {
-      await syncBookmarkMutation(prompt.id, nextValue);
-      toastSuccess(isBookmarked ? "Bookmark removed" : "Prompt bookmarked");
+    if (result) {
       setFeedbackPulse((currentState) => ({ ...currentState, bookmark: currentState.bookmark + 1 }));
-    } catch (error) {
-      setIsBookmarked(!nextValue);
-      toastError(error.message || "Unable to update your bookmark.");
-    } finally {
-      setActionState((currentState) => ({ ...currentState, bookmark: false }));
     }
   }
 
@@ -789,7 +709,7 @@ export default function PromptDetailsClient({ promptId }) {
                 >
                   <Button
                     isDisabled={!isBookmarkReady}
-                    isLoading={actionState.bookmark}
+                    isLoading={isBookmarkLoading}
                     onPress={handleBookmarkToggle}
                     size="lg"
                     variant="secondary"

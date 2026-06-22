@@ -10,6 +10,7 @@ import Button from "@/components/ui/Button";
 import DashboardSkeleton from "@/components/ui/DashboardSkeleton";
 import ErrorState from "@/components/ui/ErrorState";
 import { useDashboard } from "@/hooks/useDashboard";
+import { usePromptBookmark } from "@/hooks/usePromptBookmark";
 import { formatDashboardDate } from "@/lib/dashboard";
 import { formatCompactNumber } from "@/lib/marketplace";
 
@@ -53,6 +54,8 @@ function ActivityItem({ activity }) {
 }
 
 function RecommendedCard({ prompt }) {
+  const { handleBookmarkToggle, isBookmarked, isBookmarkLoading } = usePromptBookmark(prompt);
+
   return (
     <div className="flex items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
       <div className={`h-28 w-36 shrink-0 rounded-[20px] bg-gradient-to-br ${prompt.accent}`} />
@@ -71,8 +74,14 @@ function RecommendedCard({ prompt }) {
           <span>{formatCompactNumber(prompt.copyCount)} copies</span>
         </div>
       </div>
-      <button className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50" type="button">
-        <Bookmark className="h-4 w-4" />
+      <button
+        aria-label={isBookmarked ? `Remove ${prompt.title} bookmark` : `Save ${prompt.title} bookmark`}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={isBookmarkLoading}
+        onClick={handleBookmarkToggle}
+        type="button"
+      >
+        <Bookmark className={`h-4 w-4 ${isBookmarked ? "fill-current text-slate-900" : ""}`} />
       </button>
     </div>
   );

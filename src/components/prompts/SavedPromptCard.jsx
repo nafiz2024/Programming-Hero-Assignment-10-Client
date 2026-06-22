@@ -80,7 +80,11 @@ export default function SavedPromptCard({ prompt, onRemove }) {
         <button
           aria-label={`Remove ${prompt.title} bookmark`}
           className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-500 transition hover:bg-rose-100"
-          onClick={onRemove}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onRemove();
+          }}
           type="button"
         >
           <BookmarkMinus className="h-4 w-4" />

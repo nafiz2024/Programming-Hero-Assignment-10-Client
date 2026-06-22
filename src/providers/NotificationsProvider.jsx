@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useEffect, useState } from "react";
 
-import { bookmarkApi, paymentApi } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import { paymentApi } from "@/lib/api";
 import {
   buildNotificationSummary,
   getNotificationReadIds,
@@ -11,12 +13,12 @@ import {
   normalizeNotificationSource,
   setNotificationReadIds,
 } from "@/lib/notifications";
-import { useAuth } from "@/hooks/useAuth";
 
 export const NotificationsContext = createContext(undefined);
 
 export function NotificationsProvider({ children }) {
   const { isAuthenticated, loading, user } = useAuth();
+  const { items: bookmarks } = useBookmarks();
   const viewedUserId = user?.id || "";
   const [state, setState] = useState({
     status: "loading",
@@ -50,15 +52,13 @@ export function NotificationsProvider({ children }) {
       error: "",
     }));
 
-    const [bookmarksResult, paymentsResult] = await Promise.allSettled([
-      bookmarkApi.getAll(),
+    const paymentsResult = await Promise.allSettled([
       paymentApi.getMyPayments(),
     ]);
 
-    const bookmarksPayload = bookmarksResult.status === "fulfilled" ? bookmarksResult.value : [];
-    const paymentsPayload = paymentsResult.status === "fulfilled" ? paymentsResult.value : [];
+    const paymentsPayload = paymentsResult[0]?.status === "fulfilled" ? paymentsResult[0].value : [];
     const normalized = normalizeNotificationSource({
-      bookmarksPayload,
+      bookmarksPayload: bookmarks,
       paymentsPayload,
       user,
     });
@@ -72,7 +72,7 @@ export function NotificationsProvider({ children }) {
       recentlyViewed: getRecentlyViewedPrompts(user.id),
       error: "",
     });
-  }, [isAuthenticated, loading, user]);
+  }, [bookmarks, isAuthenticated, loading, user]);
 
   function persistReadState(nextItems) {
     if (!user?.id) {

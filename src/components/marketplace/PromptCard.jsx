@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark, Copy, Star } from "lucide-react";
 
 import Button from "@/components/ui/Button";
+import { usePromptBookmark } from "@/hooks/usePromptBookmark";
 import { formatCompactNumber } from "@/lib/marketplace";
 
 function toneClassForVisibility(visibility) {
@@ -39,6 +40,20 @@ export default function PromptCard({
   accent,
 }) {
   const shouldReduceMotion = useReducedMotion();
+  const prompt = {
+    id,
+    title,
+    category,
+    aiTool,
+    difficulty,
+    visibility,
+    rating,
+    copyCount,
+    author,
+    description,
+    accent,
+  };
+  const { handleBookmarkToggle, isBookmarked, isBookmarkLoading } = usePromptBookmark(prompt);
 
   return (
     <motion.article
@@ -86,12 +101,15 @@ export default function PromptCard({
         </div>
         <div className="flex items-center gap-2">
           <motion.button
-            className="pf-touch-target inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted transition hover:text-foreground"
+            aria-label={isBookmarked ? `Remove ${title} bookmark` : `Save ${title} bookmark`}
+            className="pf-touch-target inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-muted transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={handleBookmarkToggle}
+            disabled={isBookmarkLoading}
             type="button"
             whileHover={shouldReduceMotion ? undefined : { scale: 1.08 }}
             whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
           >
-            <Bookmark className="h-4 w-4" />
+            <Bookmark className={`h-4 w-4 ${isBookmarked ? "fill-current text-foreground" : ""}`} />
           </motion.button>
           <Button as={Link} href={`/prompts/${id}`} size="sm" variant="secondary">
             View Details

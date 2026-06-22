@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useState } from "react";
 
-import { bookmarkApi, promptApi, userApi } from "@/lib/api";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import { promptApi, userApi } from "@/lib/api";
 import {
   DASHBOARD_REVIEWS_EVENT,
   buildDashboardStats,
@@ -33,13 +34,13 @@ export function DashboardProvider({ children }) {
     status: "loading",
     error: "",
     user: null,
-    bookmarks: [],
     promptCatalog: [],
     ownedPrompts: [],
     localReviews: [],
   });
+  const { items: bookmarks, refreshBookmarks, status: bookmarksStatus } = useBookmarks();
 
-  async function refreshDashboard() {
+  const refreshDashboard = useCallback(async () => {
     setState((currentState) => ({
       ...currentState,
       status: currentState.user ? "refreshing" : "loading",
@@ -49,13 +50,16 @@ export function DashboardProvider({ children }) {
     try {
       const [userResponse, bookmarksResponse, promptsResponse] = await Promise.all([
         userApi.getMe(),
-        bookmarkApi.getAll(),
+        refreshBookmarks(),
         promptApi.getAll(),
       ]);
 
       const profileOverrides = getStorageItem(getProfileStorageKey(), {});
       const promptCatalog = normalizePromptPayload(promptsResponse);
-      const normalizedBookmarks = normalizeBookmarks(bookmarksResponse, promptCatalog);
+      const normalizedBookmarks =
+        Array.isArray(bookmarksResponse) && bookmarksResponse.length > 0
+          ? bookmarksResponse
+          : normalizeBookmarks(bookmarksResponse, promptCatalog);
       const normalizedUser = normalizeDashboardUser(userResponse, profileOverrides);
       const ownedPrompts = normalizeOwnedPrompts(promptsResponse, normalizedUser);
       const persistedReviews = getStorageItem(getReviewsStorageKey(), null);
@@ -72,7 +76,6 @@ export function DashboardProvider({ children }) {
         status: "success",
         error: "",
         user: normalizedUser,
-        bookmarks: normalizedBookmarks,
         promptCatalog,
         ownedPrompts,
         localReviews,
@@ -82,13 +85,12 @@ export function DashboardProvider({ children }) {
         status: "error",
         error: error.message || "Unable to load dashboard data.",
         user: null,
-        bookmarks: [],
         promptCatalog: [],
         ownedPrompts: [],
         localReviews: [],
       });
     }
-  }
+  }, [refreshBookmarks]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -111,7 +113,7 @@ export function DashboardProvider({ children }) {
       window.removeEventListener("storage", syncStoredReviews);
       window.removeEventListener(DASHBOARD_REVIEWS_EVENT, syncStoredReviews);
     };
-  }, []);
+  }, [refreshDashboard]);
 
   function updateProfileLocally(values) {
     const nextOverrides = {
@@ -140,26 +142,26 @@ export function DashboardProvider({ children }) {
   const derived = state.user
     ? {
         stats: buildDashboardStats({
-          bookmarks: state.bookmarks,
+          bookmarks,
           promptCatalog: state.promptCatalog,
           reviews: state.localReviews,
           user: state.user,
         }),
-        promptStats: buildDashboardPromptStats(state.ownedPrompts, state.bookmarks, state.localReviews, state.user),
+        promptStats: buildDashboardPromptStats(state.ownedPrompts, bookmarks, state.localReviews, state.user),
         promptPerformance: buildPromptPerformance(state.ownedPrompts),
         activity: buildRecentActivity({
           user: state.user,
-          bookmarks: state.bookmarks,
+          bookmarks,
           reviews: state.localReviews,
         }),
         userActivity: buildUserDashboardActivity({
           user: state.user,
-          bookmarks: state.bookmarks,
+          bookmarks,
           reviews: state.localReviews,
           ownedPrompts: state.ownedPrompts,
         }),
-        recommendedPrompts: buildRecommendedPrompts(state.promptCatalog, state.bookmarks),
-        freeUserRecommendations: buildRecommendedForFreeUser(state.promptCatalog, state.bookmarks, state.ownedPrompts),
+        recommendedPrompts: buildRecommendedPrompts(state.promptCatalog, bookmarks),
+        freeUserRecommendations: buildRecommendedForFreeUser(state.promptCatalog, bookmarks, state.ownedPrompts),
       }
     : {
         stats: [],
@@ -219,6 +221,11 @@ export function DashboardProvider({ children }) {
 
   const value = {
     ...state,
+    bookmarks,
+    status:
+      state.status === "success" && (bookmarksStatus === "loading" || bookmarksStatus === "refreshing")
+        ? bookmarksStatus
+        : state.status,
     ...derived,
     refreshDashboard,
     updateProfileLocally,

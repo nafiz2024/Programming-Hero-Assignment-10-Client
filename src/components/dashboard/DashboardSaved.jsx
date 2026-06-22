@@ -12,7 +12,6 @@ import ErrorState from "@/components/ui/ErrorState";
 import Pagination from "@/components/ui/Pagination";
 import PromptGridSkeleton from "@/components/ui/PromptGridSkeleton";
 import { useSavedPrompts } from "@/hooks/useSavedPrompts";
-import { bookmarkApi } from "@/lib/api";
 import {
   filterSavedPrompts,
   paginateSavedPrompts,
@@ -45,7 +44,7 @@ function SavedPromptsEmptyState() {
 }
 
 export default function DashboardSaved() {
-  const { error, items, refresh, removePromptLocally, source, status } = useSavedPrompts();
+  const { error, items, refresh, removeBookmark, status } = useSavedPrompts();
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState(savedPromptSortOptions[0]);
   const [page, setPage] = useState(1);
@@ -72,11 +71,7 @@ export default function DashboardSaved() {
     setIsRemoving(true);
 
     try {
-      if (source !== "mock") {
-        await bookmarkApi.remove(pendingRemoval.id);
-      }
-
-      removePromptLocally(pendingRemoval.id);
+      await removeBookmark(pendingRemoval.id);
       setPendingRemoval(null);
       toastSuccess("Saved prompt removed");
     } catch (removeError) {
@@ -86,7 +81,7 @@ export default function DashboardSaved() {
     }
   }
 
-  if (status === "loading") {
+  if (status === "loading" || status === "refreshing") {
     return <PromptGridSkeleton count={8} />;
   }
 

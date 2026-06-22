@@ -182,10 +182,9 @@ export const bookmarkApi = {
     });
   },
 
-  create(payload) {
-    return apiRequest("/api/bookmarks", {
+  create(promptId) {
+    return apiRequest(`/api/bookmarks/${promptId}`, {
       method: "POST",
-      body: payload,
     });
   },
 
