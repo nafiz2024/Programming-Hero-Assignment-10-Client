@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, LayoutDashboard, LogOut, Sparkles, UserRound } from "lucide-react";
 import clsx from "clsx";
@@ -37,12 +37,18 @@ export default function Navbar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const profileMenuRef = useRef(null);
   const shouldReduceMotion = useReducedMotion();
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const userRole = normalizeRole(user?.role);
   const dashboardHref = getPostAuthRedirect(user);
   const profileHref = userRole === "admin" ? "/admin" : "/dashboard/profile";
   const hasUser = Boolean(user?.id || user?.email);
-  const showAuthenticatedActions = hasUser || isAuthenticated;
-  const showGuestActions = !loading && !showAuthenticatedActions;
+  const isAuthResolved = mounted && !loading;
+  const showAuthenticatedActions = isAuthResolved && (hasUser || isAuthenticated);
+  const showGuestActions = isAuthResolved && !showAuthenticatedActions;
   const dropdownPreset = shouldReduceMotion ? motionPresets.reduced : motionPresets.dropdownScale;
 
   useEffect(() => {
@@ -133,7 +139,11 @@ export default function Navbar() {
                   aria-expanded={isProfileMenuOpen}
                   aria-label="Open profile menu"
                   className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-2.5 py-2 text-left transition hover:bg-white/10 sm:gap-3 sm:px-3"
-                  onClick={() => setIsProfileMenuOpen((currentValue) => !currentValue)}
+                  onClick={() => {
+                    if (pathname) {
+                      setIsProfileMenuOpen((currentValue) => !currentValue);
+                    }
+                  }}
                   type="button"
                 >
                   <UserAvatar

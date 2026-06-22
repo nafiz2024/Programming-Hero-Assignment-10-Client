@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useSyncExternalStore } from "react";
 
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
@@ -10,7 +11,13 @@ const authRoutes = new Set(["/login", "/register"]);
 
 export default function MarketingChrome({ children }) {
   const pathname = usePathname();
-  const isAuthRoute = authRoutes.has(pathname);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
+  const isAuthRoute = mounted && authRoutes.has(pathname);
 
   if (isAuthRoute) {
     return (
