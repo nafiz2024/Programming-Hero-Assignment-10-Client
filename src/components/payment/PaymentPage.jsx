@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   BadgeCheck,
   CalendarDays,
-  CheckCircle2,
   ChevronRight,
   CreditCard,
   Lock,
@@ -26,14 +25,10 @@ import ErrorState from "@/components/ui/ErrorState";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/hooks/useAuth";
 import { paymentApi } from "@/lib/api";
-import {
-  buildPaymentConfirmationPayload,
-  buildPaymentPayload,
-  getPremiumRedirectTarget,
-  isPremiumSubscription,
-  PREMIUM_PLAN,
-} from "@/lib/payments";
-import { toastError, toastSuccess } from "@/lib/toast";
+import { buildPaymentPayload, isPremiumSubscription, PREMIUM_PLAN } from "@/lib/payments";
+import { toastError, toastWarning } from "@/lib/toast";
+
+const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
 function SecurityBadge({ icon: Icon, label }) {
   return (
@@ -63,48 +58,27 @@ function Field({ icon: Icon, label, name, onChange, placeholder, type = "text", 
   );
 }
 
-function StatusCard({ onRetry, state, transactionId }) {
+function StatusCard({ onRetry, state }) {
   const shouldReduceMotion = useReducedMotion();
 
   if (state === "idle" || state === "processing") {
     return null;
   }
 
-  if (state === "success") {
-    return (
-      <div className="rounded-[26px] border border-emerald-200 bg-emerald-50 p-5">
-      <div className="flex items-start gap-3">
-          <motion.div
-            animate={shouldReduceMotion ? undefined : { scale: [0.94, 1.08, 1] }}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600"
-            transition={{ duration: 0.45, ease: "easeOut" }}
-          >
-            <CheckCircle2 className="h-5 w-5" />
-          </motion.div>
-          <div>
-            <h3 className="text-lg font-semibold text-emerald-700">Premium activated</h3>
-            <p className="mt-2 text-sm leading-6 text-emerald-700/85">
-              Your PromptFlow premium access has been activated successfully.
-            </p>
-            <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-emerald-700/70">
-              Transaction ID: {transactionId || "Processing"}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="rounded-[26px] border border-rose-200 bg-rose-50 p-5">
       <div className="flex items-start gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
+        <motion.div
+          animate={shouldReduceMotion ? undefined : { scale: [0.96, 1.04, 1] }}
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600"
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        >
           <TriangleAlert className="h-5 w-5" />
-        </div>
+        </motion.div>
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-rose-700">Payment failed</h3>
           <p className="mt-2 text-sm leading-6 text-rose-700/85">
-            We couldn&apos;t activate premium access yet. Please review your checkout info and retry.
+            We couldn&apos;t start secure Stripe checkout yet. Please review the error and retry.
           </p>
           <Button className="mt-4" onPress={onRetry} size="sm" variant="danger">
             Retry Payment
@@ -116,10 +90,12 @@ function StatusCard({ onRetry, state, transactionId }) {
 }
 
 function PaymentPageContent() {
-  const { isAuthenticated, refreshUser, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "";
+  const wasPaymentCancelled = searchParams.get("payment") === "cancelled";
+  const cancelledMessage = "Stripe checkout was cancelled before payment completed.";
   const [values, setValues] = useState({
     cardNumber: "",
     expiry: "",
@@ -129,12 +105,18 @@ function PaymentPageContent() {
   });
   const [state, setState] = useState({
     status: "idle",
-    transactionId: "",
     error: "",
   });
 
   const isPremiumUser = isPremiumSubscription(user?.subscription);
-  const paymentTarget = useMemo(() => getPremiumRedirectTarget(returnTo), [returnTo]);
+
+  useEffect(() => {
+    if (!wasPaymentCancelled) {
+      return;
+    }
+
+    toastWarning(cancelledMessage);
+  }, [cancelledMessage, wasPaymentCancelled]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -144,10 +126,10 @@ function PaymentPageContent() {
         name === "cardNumber"
           ? value.replace(/[^\d\s]/g, "").slice(0, 19)
           : name === "expiry"
-          ? value.replace(/[^\d/]/g, "").slice(0, 5)
-          : name === "cvc"
-          ? value.replace(/[^\d]/g, "").slice(0, 4)
-          : value,
+            ? value.replace(/[^\d/]/g, "").slice(0, 5)
+            : name === "cvc"
+              ? value.replace(/[^\d]/g, "").slice(0, 4)
+              : value,
     }));
   }
 
@@ -167,39 +149,43 @@ function PaymentPageContent() {
 
     setState({
       status: "processing",
-      transactionId: "",
       error: "",
     });
 
     try {
-      const intentResponse = await paymentApi.createPaymentIntent(buildPaymentPayload(values, user));
-      const confirmationPayload = buildPaymentConfirmationPayload(intentResponse, values, user);
-      const confirmationResponse = await paymentApi.confirmPayment(confirmationPayload);
-      const transactionId =
-        confirmationResponse?.transactionId ||
-        confirmationResponse?.paymentIntentId ||
-        confirmationPayload.transactionId;
-
-      await refreshUser();
-      toastSuccess("Premium payment completed successfully");
-      setState({
-        status: "success",
-        transactionId,
-        error: "",
+      console.info("[payment] Starting Stripe checkout session", {
+        billingEmail: values.billingEmail,
+        hasBillingName: Boolean(values.nameOnCard.trim()),
+        hasPublishableKey: Boolean(STRIPE_PUBLISHABLE_KEY),
       });
 
-      window.setTimeout(() => {
-        router.push(
-          paymentTarget === "/premium"
-            ? `/premium?payment=success&tx=${encodeURIComponent(transactionId || "")}`
-            : paymentTarget,
-        );
-      }, 900);
+      const sessionResponse = await paymentApi.createCheckoutSession(buildPaymentPayload(values, user));
+
+      console.info("[payment] Stripe checkout session created", {
+        sessionId: sessionResponse?.sessionId,
+        hasUrl: Boolean(sessionResponse?.url),
+      });
+
+      if (sessionResponse?.url) {
+        if (!STRIPE_PUBLISHABLE_KEY) {
+          console.warn("[payment] NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not configured. Redirecting with the hosted Checkout URL.");
+        }
+
+        window.location.assign(sessionResponse.url);
+        return;
+      }
+
+      throw new Error("Stripe checkout session was created, but no hosted Checkout URL was returned.");
     } catch (error) {
+      console.error("[payment] Unable to start Stripe checkout", {
+        message: error?.message,
+        status: error?.status,
+        data: error?.data,
+      });
+
       toastError(error.message || "Unable to complete payment.");
       setState({
         status: "failed",
-        transactionId: "",
         error: error.message || "Unable to complete payment.",
       });
     }
@@ -266,7 +252,7 @@ function PaymentPageContent() {
 
             <div className="mt-6 flex flex-wrap gap-3">
               <SecurityBadge icon={ShieldCheck} label="SSL secured" />
-              <SecurityBadge icon={Lock} label="No card storage" />
+              <SecurityBadge icon={Lock} label="Stripe hosted card entry" />
               <SecurityBadge icon={Sparkles} label="Premium unlock" />
             </div>
           </aside>
@@ -281,14 +267,13 @@ function PaymentPageContent() {
               </div>
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Secure checkout feel
+                Secure Stripe checkout
               </div>
             </div>
 
             <StatusCard
-              onRetry={() => setState({ status: "idle", transactionId: "", error: "" })}
-              state={state.status}
-              transactionId={state.transactionId}
+              onRetry={() => setState({ status: "idle", error: "" })}
+              state={wasPaymentCancelled ? "failed" : state.status}
             />
 
             <form className="mt-6 space-y-5" onSubmit={handlePayment}>
@@ -345,8 +330,11 @@ function PaymentPageContent() {
                   <span className="text-lg font-semibold text-slate-950">$5.00</span>
                 </div>
                 <p className="mt-2 text-xs leading-6 text-slate-500">
-                  Card fields are kept in local UI state only. No raw card data is stored or forwarded by this frontend checkout.
+                  Card details are entered securely on Stripe after you continue. This page only prepares your hosted checkout session.
                 </p>
+                {state.error || wasPaymentCancelled ? (
+                  <p className="mt-3 text-xs leading-6 text-rose-600">{state.error || cancelledMessage}</p>
+                ) : null}
               </div>
 
               <Button isLoading={state.status === "processing"} size="lg" type="submit">
@@ -356,7 +344,7 @@ function PaymentPageContent() {
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
                   { icon: ShieldCheck, label: "Encrypted checkout" },
-                  { icon: Lock, label: "Safe billing flow" },
+                  { icon: Lock, label: "Stripe handles cards" },
                   { icon: RotateCcw, label: "Retry friendly" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-xs font-medium text-slate-500">

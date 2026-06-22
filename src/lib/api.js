@@ -233,15 +233,15 @@ export const reviewApi = {
 };
 
 export const paymentApi = {
-  createPaymentIntent(payload) {
-    return apiRequest("/api/payments/create-payment-intent", {
+  createCheckoutSession(payload) {
+    return apiRequest("/api/payments/checkout-session", {
       method: "POST",
       body: payload,
     });
   },
 
-  confirmPayment(payload) {
-    return apiRequest("/api/payments/confirm-payment", {
+  finalizeCheckoutSession(payload) {
+    return apiRequest("/api/payments/finalize-checkout", {
       method: "POST",
       body: payload,
     });

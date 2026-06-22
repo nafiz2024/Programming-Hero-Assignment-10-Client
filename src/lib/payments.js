@@ -105,25 +105,3 @@ export function buildPaymentPayload(values, user) {
     currency: "usd",
   };
 }
-
-export function buildPaymentConfirmationPayload(intentResponse, values, user) {
-  const paymentIntentId =
-    intentResponse?.paymentIntentId ||
-    intentResponse?.intentId ||
-    intentResponse?.transactionId ||
-    intentResponse?.clientSecret ||
-    intentResponse?.data?.paymentIntentId ||
-    intentResponse?.data?.transactionId ||
-    intentResponse?.result?.paymentIntentId ||
-    intentResponse?.result?.transactionId ||
-    "";
-
-  return {
-    paymentIntentId,
-    transactionId: paymentIntentId,
-    amount: PREMIUM_PLAN.price,
-    billingEmail: values.billingEmail.trim() || user?.email || "",
-    billingName: values.nameOnCard.trim() || user?.name || "",
-    plan: PREMIUM_PLAN.id,
-  };
-}

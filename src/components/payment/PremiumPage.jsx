@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useEffectEvent, useMemo, useState } from "react";
 import { BadgeCheck, CalendarDays, Check, CreditCard, Crown, ShieldCheck } from "lucide-react";
 
 import MotionReveal from "@/components/shared/MotionReveal";
@@ -63,7 +63,7 @@ function StatusSummary({ payments, user }) {
 }
 
 function PremiumPageContent() {
-  const { user } = useAuth();
+  const { refreshUser, user } = useAuth();
   const searchParams = useSearchParams();
   const [state, setState] = useState({
     status: "loading",
@@ -72,13 +72,32 @@ function PremiumPageContent() {
   });
   const isPremium = isPremiumSubscription(user?.subscription);
   const paymentSuccess = searchParams.get("payment") === "success";
-  const transactionId = searchParams.get("tx") || "";
+  const sessionId = searchParams.get("session_id") || "";
+  const [transactionId, setTransactionId] = useState("");
+  const refreshUserAfterPayment = useEffectEvent(async () => {
+    await refreshUser();
+  });
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadPayments() {
       try {
+        if (paymentSuccess && sessionId) {
+          console.info("[payment] Finalizing Stripe checkout session", { sessionId });
+          const finalizeResponse = await paymentApi.finalizeCheckoutSession({ sessionId });
+          await refreshUserAfterPayment();
+
+          if (isMounted) {
+            setTransactionId(finalizeResponse?.transactionId || "");
+          }
+
+          console.info("[payment] Stripe checkout finalized", {
+            sessionId,
+            transactionId: finalizeResponse?.transactionId,
+          });
+        }
+
         const response = await paymentApi.getMyPayments();
         const normalized = normalizePayments(response).sort(
           (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -92,6 +111,13 @@ function PremiumPageContent() {
           });
         }
       } catch (error) {
+        console.error("[payment] Unable to finalize or load payment history", {
+          message: error?.message,
+          status: error?.status,
+          data: error?.data,
+          sessionId,
+        });
+
         if (isMounted) {
           setState({
             status: "error",
@@ -107,7 +133,7 @@ function PremiumPageContent() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [paymentSuccess, sessionId]);
 
   const latestPayment = useMemo(() => state.payments[0] || null, [state.payments]);
 
