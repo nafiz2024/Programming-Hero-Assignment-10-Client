@@ -285,6 +285,10 @@ export const adminApi = {
     return apiRequest(`/api/users${queryString}`);
   },
 
+  getPrompts(queryString = "") {
+    return apiRequest(`/api/prompts/admin/all${queryString}`);
+  },
+
   updateUserRole(id, payload) {
     return apiRequest(`/api/users/${id}/role`, {
       method: "PATCH",

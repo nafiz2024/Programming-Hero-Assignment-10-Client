@@ -44,6 +44,10 @@ function formatEmailFromName(name) {
 function getStatusLabel(value) {
   const normalized = String(value || "open").toLowerCase();
 
+  if (normalized.includes("resolve")) {
+    return "Resolved";
+  }
+
   if (normalized.includes("dismiss")) {
     return "Dismissed";
   }
@@ -244,6 +248,8 @@ function getPromptStatusLabel(item, index = 0) {
 
 export function getStatusBadgeClass(status) {
   switch (status) {
+    case "Resolved":
+      return "bg-sky-50 text-sky-600";
     case "Dismissed":
       return "bg-emerald-50 text-emerald-600";
     case "Warned":
@@ -322,22 +328,22 @@ export function normalizeAdminStats(payload, reports = []) {
   const dismissedReports = reports.filter((report) => report.status === "Dismissed").length;
 
   return {
-    totalUsers: parseNumber(data.totalUsers, 12458),
-    totalCreators: parseNumber(data.totalCreators, 1245),
-    totalPrompts: parseNumber(data.totalPrompts, 8756),
-    totalReviews: parseNumber(data.totalReviews, 5432),
-    totalCopies: parseNumber(data.totalCopies, 98765),
-    totalRevenue: parseNumber(data.totalRevenue, 28450.75),
+    totalUsers: parseNumber(data.totalUsers, 0),
+    totalCreators: parseNumber(data.totalCreators, 0),
+    totalPrompts: parseNumber(data.totalPrompts, 0),
+    totalReviews: parseNumber(data.totalReviews, 0),
+    totalCopies: parseNumber(data.totalCopies, 0),
+    totalRevenue: parseNumber(data.totalRevenue, 0),
     totalPayments: parseNumber(data.totalPayments || data.totalTransactions, 0),
-    pendingPrompts: parseNumber(data.pendingPrompts || data.pendingReviewPrompts, 12),
-    openReports: parseNumber(data.openReports, openReports || 24),
-    removedPrompts: parseNumber(data.removedPrompts, removedReports || 18),
-    warningsSent: parseNumber(data.warningsSent, warnedReports || 32),
-    dismissedReports: parseNumber(data.dismissedReports, dismissedReports || 56),
-    categories: parseNumber(data.categories, 24),
-    activeAiTools: parseNumber(data.activeAiTools || data.aiTools, 8),
-    totalBookmarks: parseNumber(data.totalBookmarks, 15678),
-    averageRating: parseNumber(data.averageRating, 4.6),
+    pendingPrompts: parseNumber(data.pendingPrompts || data.pendingReviewPrompts, 0),
+    openReports: parseNumber(data.openReports, openReports),
+    removedPrompts: parseNumber(data.removedPrompts, removedReports),
+    warningsSent: parseNumber(data.warningsSent, warnedReports),
+    dismissedReports: parseNumber(data.dismissedReports, dismissedReports),
+    categories: parseNumber(data.categories, 0),
+    activeAiTools: parseNumber(data.activeAiTools || data.aiTools, 0),
+    totalBookmarks: parseNumber(data.totalBookmarks, 0),
+    averageRating: parseNumber(data.averageRating, 0),
   };
 }
 
@@ -796,170 +802,5 @@ export function buildAdminPromptStatusCounts(prompts) {
     Approved: prompts.filter((prompt) => prompt.status === "Approved").length,
     Rejected: prompts.filter((prompt) => prompt.status === "Rejected").length,
     Featured: prompts.filter((prompt) => prompt.status === "Featured" || prompt.featured).length,
-  };
-}
-
-function buildRevenueSeries(totalRevenue) {
-  const base = Math.max(6200, Math.round(totalRevenue * 0.24));
-  const values = [base, base + 900, base + 1300, base + 1600, base + 3600, base + 5200, base + 6800];
-  const labels = ["May 24", "May 25", "May 26", "May 27", "May 28", "May 29", "May 30"];
-
-  return labels.map((label, index) => ({
-    label,
-    value: values[index],
-  }));
-}
-
-function buildPromptSubmissionSeries(totalPrompts) {
-  const base = Math.max(520, Math.round(totalPrompts * 0.065));
-  const values = [base, base + 220, base + 180, base + 410, base + 500, base + 640, base + 690];
-  const labels = ["May 24", "May 25", "May 26", "May 27", "May 28", "May 29", "May 30"];
-
-  return labels.map((label, index) => ({
-    label,
-    value: values[index],
-  }));
-}
-
-function buildUserGrowthSeries(totalUsers) {
-  const base = Math.max(6200, Math.round(totalUsers * 0.52));
-  const values = [base, base + 1400, base + 1600, base + 2100, base + 4300, base + 5300, base + 6200];
-  const labels = ["May 24", "May 25", "May 26", "May 27", "May 28", "May 29", "May 30"];
-
-  return labels.map((label, index) => ({
-    label,
-    value: values[index],
-  }));
-}
-
-function buildCategoryDistribution(totalPrompts) {
-  const buckets = [
-    { label: "AI Writing", percent: 28.4, color: "bg-violet-500" },
-    { label: "Marketing", percent: 18.7, color: "bg-emerald-500" },
-    { label: "Development", percent: 16.3, color: "bg-amber-500" },
-    { label: "Design", percent: 12.5, color: "bg-sky-500" },
-    { label: "Productivity", percent: 9.8, color: "bg-fuchsia-400" },
-    { label: "Education", percent: 7.6, color: "bg-purple-300" },
-    { label: "Others", percent: 6.7, color: "bg-indigo-300" },
-  ];
-
-  return buckets.map((bucket) => ({
-    ...bucket,
-    value: Math.max(1, Math.round((bucket.percent / 100) * totalPrompts)),
-  }));
-}
-
-function buildAiToolUsage(totalCopies) {
-  const tools = [
-    { label: "ChatGPT", percent: 42.1 },
-    { label: "Midjourney", percent: 21.3 },
-    { label: "Claude", percent: 12.8 },
-    { label: "Gemini", percent: 8.7 },
-    { label: "DALL-E", percent: 6.2 },
-    { label: "Others", percent: 8.9 },
-  ];
-
-  return tools.map((tool) => ({
-    ...tool,
-    value: Math.max(1, Math.round((tool.percent / 100) * totalCopies)),
-  }));
-}
-
-function isPaymentLikeActivity(item) {
-  const haystack = [item.type, item.title, item.subtitle].join(" ").toLowerCase();
-  return (
-    haystack.includes("payment") ||
-    haystack.includes("revenue") ||
-    haystack.includes("plan") ||
-    haystack.includes("subscription") ||
-    haystack.includes("creator pro") ||
-    haystack.includes("premium")
-  );
-}
-
-function isUserLikeActivity(item) {
-  const haystack = [item.type, item.title, item.subtitle].join(" ").toLowerCase();
-  return (
-    haystack.includes("user") ||
-    haystack.includes("creator") ||
-    haystack.includes("joined") ||
-    haystack.includes("signup") ||
-    haystack.includes("member")
-  );
-}
-
-function buildFallbackRecentUsers() {
-  return [
-    { id: "user-1", name: "Sarah Johnson", email: "sarah.johnson@example.com", timeAgo: "2 minutes ago" },
-    { id: "user-2", name: "Michael Chen", email: "michael.chen@example.com", timeAgo: "15 minutes ago" },
-    { id: "user-3", name: "Emma Davis", email: "emma.davis@example.com", timeAgo: "32 minutes ago" },
-    { id: "user-4", name: "James Wilson", email: "james.wilson@example.com", timeAgo: "1 hour ago" },
-    { id: "user-5", name: "Olivia Brown", email: "olivia.brown@example.com", timeAgo: "2 hours ago" },
-  ];
-}
-
-function buildFallbackPayments() {
-  return [
-    { id: "pay-1", title: "Premium Plan - Annual", subtitle: "by Sarah Johnson", amount: "$59.00", status: "Completed", timeAgo: "2 minutes ago" },
-    { id: "pay-2", title: "Creator Pro - Monthly", subtitle: "by Michael Chen", amount: "$19.00", status: "Completed", timeAgo: "15 minutes ago" },
-    { id: "pay-3", title: "Premium Plan - Annual", subtitle: "by Emma Davis", amount: "$59.00", status: "Completed", timeAgo: "45 minutes ago" },
-    { id: "pay-4", title: "Creator Pro - Monthly", subtitle: "by James Wilson", amount: "$19.00", status: "Completed", timeAgo: "1 hour ago" },
-    { id: "pay-5", title: "Premium Plan - Annual", subtitle: "by Olivia Brown", amount: "$59.00", status: "Completed", timeAgo: "2 hours ago" },
-  ];
-}
-
-function buildFallbackModerationAlerts() {
-  return [
-    { id: "alert-1", title: "Prompt submission pending review", subtitle: "“Advanced Jailbreak Prompt” by user_1234", timeAgo: "10 minutes ago" },
-    { id: "alert-2", title: "Prompt reported by users", subtitle: "“Free ChatGPT Plus” by user_5678", timeAgo: "25 minutes ago" },
-    { id: "alert-3", title: "Inappropriate content detected", subtitle: "“NSFW Image Generator” by user_9101", timeAgo: "1 hour ago" },
-    { id: "alert-4", title: "Prompt submission pending review", subtitle: "“Make Money Fast” by user_1122", timeAgo: "2 hours ago" },
-    { id: "alert-5", title: "Prompt reported by users", subtitle: "“Hacking Guide” by user_3344", timeAgo: "3 hours ago" },
-  ];
-}
-
-export function buildAdminAnalyticsData({ activity = [], stats }) {
-  const recentUsers = activity
-    .filter(isUserLikeActivity)
-    .slice(0, 5)
-    .map((item, index) => ({
-      id: item.id || `recent-user-${index}`,
-      name: item.title || `User ${index + 1}`,
-      email: item.subtitle || formatEmailFromName(item.title || `user ${index + 1}`),
-      timeAgo: item.amount || item.status || "Recently",
-    }));
-  const recentPayments = activity
-    .filter(isPaymentLikeActivity)
-    .slice(0, 5)
-    .map((item, index) => ({
-      id: item.id || `recent-payment-${index}`,
-      title: item.title || "Platform payment",
-      subtitle: item.subtitle || "PromptFlow transaction",
-      amount: item.amount || "$59.00",
-      status: item.status || "Completed",
-      timeAgo: item.date ? formatDateString(item.date) : "Recently",
-    }));
-  const pendingModerationAlerts = activity
-    .filter((item) => !isPaymentLikeActivity(item) && !isUserLikeActivity(item))
-    .slice(0, 5)
-    .map((item, index) => ({
-      id: item.id || `moderation-alert-${index}`,
-      title: item.title || "Pending moderation alert",
-      subtitle: item.subtitle || item.status || "Review this item in the moderation queue.",
-      timeAgo: item.date ? formatDateString(item.date) : "Recently",
-    }));
-
-  return {
-    userGrowth: buildUserGrowthSeries(stats.totalUsers),
-    promptSubmissions: buildPromptSubmissionSeries(stats.totalPrompts),
-    revenue: buildRevenueSeries(stats.totalRevenue),
-    categoryDistribution: buildCategoryDistribution(stats.totalPrompts),
-    aiToolUsage: buildAiToolUsage(stats.totalCopies),
-    recentUsers: recentUsers.length > 0 ? recentUsers : buildFallbackRecentUsers(),
-    recentPayments: recentPayments.length > 0 ? recentPayments : buildFallbackPayments(),
-    pendingModerationAlerts:
-      pendingModerationAlerts.length > 0
-        ? pendingModerationAlerts
-        : buildFallbackModerationAlerts(),
   };
 }
