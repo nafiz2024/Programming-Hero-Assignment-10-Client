@@ -7,6 +7,7 @@ import { Bookmark, Copy, Star } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { usePromptBookmark } from "@/hooks/usePromptBookmark";
 import { formatCompactNumber } from "@/lib/marketplace";
+import { getPromptId } from "@/lib/prompt-id";
 
 function toneClassForVisibility(visibility) {
   return visibility === "Premium"
@@ -40,7 +41,7 @@ export default function PromptCard({
   visibility,
   accent,
 }) {
-  const promptId = String(_id || id || "");
+  const promptId = getPromptId({ _id, id });
   const shouldReduceMotion = useReducedMotion();
   const prompt = {
     id: promptId,

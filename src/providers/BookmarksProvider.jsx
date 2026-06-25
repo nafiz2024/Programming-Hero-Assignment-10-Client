@@ -4,6 +4,7 @@ import { createContext, useCallback, useEffect, useMemo, useRef, useState } from
 
 import { useAuth } from "@/hooks/useAuth";
 import { bookmarkApi } from "@/lib/api";
+import { getPromptId } from "@/lib/prompt-id";
 import { normalizeSavedPrompts } from "@/lib/saved-prompts";
 
 const defaultAccent = "from-sky-500/30 via-cyan-500/12 to-transparent";
@@ -11,7 +12,7 @@ const defaultAccent = "from-sky-500/30 via-cyan-500/12 to-transparent";
 export const BookmarksContext = createContext(undefined);
 
 function createOptimisticBookmark(prompt) {
-  const promptId = String(prompt?._id || prompt?.id || "");
+  const promptId = getPromptId(prompt);
 
   return {
     id: promptId,
@@ -119,7 +120,7 @@ export function BookmarksProvider({ children }) {
   );
 
   const addBookmark = useCallback(async (prompt) => {
-    const promptId = String(prompt?._id || prompt?.id || "");
+    const promptId = getPromptId(prompt);
 
     if (!promptId) {
       throw new Error("Prompt id is required to add a bookmark.");
@@ -184,7 +185,7 @@ export function BookmarksProvider({ children }) {
   }, [refreshBookmarks]);
 
   const toggleBookmark = useCallback(async (prompt) => {
-    const promptId = String(prompt?._id || prompt?.id || "");
+    const promptId = getPromptId(prompt);
 
     if (!promptId) {
       throw new Error("Prompt id is required to update a bookmark.");

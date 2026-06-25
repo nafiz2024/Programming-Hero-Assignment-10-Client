@@ -157,7 +157,7 @@ export const promptApi = {
 
   copyPublic(id, payload = {}) {
     return apiRequest(`/api/prompts/${id}/copy`, {
-      method: "POST",
+      method: "PATCH",
       body: payload,
     });
   },

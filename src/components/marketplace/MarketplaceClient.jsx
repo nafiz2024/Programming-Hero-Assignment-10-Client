@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Filter, LoaderCircle, SlidersHorizontal } from "lucide-react";
 
 import MotionReveal from "@/components/shared/MotionReveal";
@@ -29,6 +29,43 @@ import {
 import { enrichPromptsWithReviewSummaries, REVIEW_SYNC_EVENT } from "@/lib/reviews";
 
 const PAGE_SIZE = 6;
+
+function buildMarketplaceQuery(filters, page) {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("limit", String(PAGE_SIZE));
+
+  if (filters.search.trim()) {
+    params.set("search", filters.search.trim());
+  }
+
+  if (filters.category !== marketplaceFilterOptions.category[0]) {
+    params.set("category", filters.category);
+  }
+
+  if (filters.aiTool !== marketplaceFilterOptions.aiTool[0]) {
+    params.set("aiTool", filters.aiTool);
+  }
+
+  if (filters.difficulty !== marketplaceFilterOptions.difficulty[0]) {
+    params.set("difficulty", filters.difficulty);
+  }
+
+  if (filters.visibility !== marketplaceFilterOptions.visibility[0]) {
+    params.set("visibility", filters.visibility);
+  }
+
+  const sortMap = {
+    "Most Popular": "popular",
+    "Highest Rated": "rating",
+    "Most Copied": "copied",
+    Newest: "latest",
+  };
+
+  params.set("sort", sortMap[filters.sortBy] || "popular");
+
+  return `?${params.toString()}`;
+}
 
 function getCounts(prompts) {
   return {
@@ -79,85 +116,97 @@ export default function MarketplaceClient() {
   const [promptState, setPromptState] = useState({
     status: "loading",
     items: [],
+    allItems: [],
+    isServerPaginated: false,
+    total: 0,
+    totalPages: 1,
     error: "",
   });
+  const requestSequenceRef = useRef(0);
 
-  async function loadPrompts() {
+  const loadPrompts = useCallback(async (activeFilters = filters, activePage = page) => {
+    const requestId = requestSequenceRef.current + 1;
+    requestSequenceRef.current = requestId;
+
     setPromptState((currentState) => ({
       ...currentState,
-      status: "loading",
+      status: currentState.items.length > 0 ? "refreshing" : "loading",
       error: "",
     }));
 
     try {
-      const response = await promptApi.getAll();
+      const response = await promptApi.getAll(buildMarketplaceQuery(activeFilters, activePage));
       const normalizedPrompts = await enrichPromptsWithReviewSummaries(normalizePromptPayload(response));
+      const hasServerPagination = Boolean(response?.pagination);
+
+      if (requestSequenceRef.current !== requestId) {
+        return;
+      }
 
       setPromptState({
         status: "success",
-        items: normalizedPrompts,
+        items: hasServerPagination ? normalizedPrompts : getPaginatedPrompts(sortPrompts(filterPrompts(normalizedPrompts, activeFilters), activeFilters.sortBy), activePage, PAGE_SIZE),
+        allItems: normalizedPrompts,
+        isServerPaginated: hasServerPagination,
+        total: hasServerPagination ? Number(response?.pagination?.total || normalizedPrompts.length) : sortPrompts(filterPrompts(normalizedPrompts, activeFilters), activeFilters.sortBy).length,
+        totalPages: hasServerPagination ? Math.max(1, Number(response?.pagination?.totalPages || 1)) : Math.max(1, Math.ceil(sortPrompts(filterPrompts(normalizedPrompts, activeFilters), activeFilters.sortBy).length / PAGE_SIZE)),
         error: "",
       });
     } catch (error) {
+      if (requestSequenceRef.current !== requestId) {
+        return;
+      }
+
       setPromptState({
         status: "error",
         items: [],
+        allItems: [],
+        isServerPaginated: false,
+        total: 0,
+        totalPages: 1,
         error: error.message || "Unable to load prompt marketplace.",
       });
     }
-  }
+  }, [filters, page]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function fetchPrompts() {
-      try {
-        const response = await promptApi.getAll();
-        const normalizedPrompts = await enrichPromptsWithReviewSummaries(normalizePromptPayload(response));
-
-        if (isMounted) {
-          setPromptState({
-            status: "success",
-            items: normalizedPrompts,
-            error: "",
-          });
-        }
-      } catch (error) {
-        if (isMounted) {
-          setPromptState({
-            status: "error",
-            items: [],
-            error: error.message || "Unable to load prompt marketplace.",
-          });
-        }
-      }
-    }
-
-    fetchPrompts();
+    const timer = window.setTimeout(() => {
+      loadPrompts(filters, page);
+    }, 0);
 
     function handleReviewSync() {
-      fetchPrompts();
+      loadPrompts(filters, page);
     }
 
     window.addEventListener(REVIEW_SYNC_EVENT, handleReviewSync);
 
     return () => {
-      isMounted = false;
+      window.clearTimeout(timer);
       window.removeEventListener(REVIEW_SYNC_EVENT, handleReviewSync);
     };
-  }, []);
+  }, [filters, loadPrompts, page]);
 
-  const counts = useMemo(() => getCounts(promptState.items), [promptState.items]);
   const filteredPrompts = useMemo(
-    () => sortPrompts(filterPrompts(promptState.items, filters), filters.sortBy),
-    [filters, promptState.items],
+    () =>
+      promptState.isServerPaginated
+        ? promptState.items
+        : sortPrompts(filterPrompts(promptState.allItems, filters), filters.sortBy),
+    [filters, promptState.allItems, promptState.isServerPaginated, promptState.items],
   );
-  const totalPages = Math.max(1, Math.ceil(filteredPrompts.length / PAGE_SIZE));
+  const counts = useMemo(
+    () => getCounts(promptState.isServerPaginated ? promptState.items : filteredPrompts),
+    [filteredPrompts, promptState.isServerPaginated, promptState.items],
+  );
+  const totalPages = promptState.isServerPaginated
+    ? Math.max(1, promptState.totalPages)
+    : Math.max(1, Math.ceil(filteredPrompts.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginatedPrompts = useMemo(
-    () => getPaginatedPrompts(filteredPrompts, currentPage, PAGE_SIZE),
-    [currentPage, filteredPrompts],
+    () => (promptState.isServerPaginated ? promptState.items : getPaginatedPrompts(filteredPrompts, currentPage, PAGE_SIZE)),
+    [currentPage, filteredPrompts, promptState.isServerPaginated, promptState.items],
   );
+  const resultCount = promptState.isServerPaginated ? promptState.total : filteredPrompts.length;
+  const hasVisiblePrompts = paginatedPrompts.length > 0;
 
   function handleFilterChange(key, value) {
     setPage(1);
@@ -185,7 +234,7 @@ export default function MarketplaceClient() {
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-display-md">Explore AI Prompts</h1>
               <span className="rounded-pill border border-primary/16 bg-primary/10 px-3 py-1.5 text-body-sm font-medium text-primary">
-                {formatCompactNumber(filteredPrompts.length)} results
+                {formatCompactNumber(resultCount)} results
               </span>
             </div>
             <p className="max-w-3xl text-body text-muted">
@@ -299,13 +348,13 @@ export default function MarketplaceClient() {
         </div>
 
         <div className="space-y-6">
-          {promptState.status === "loading" ? <PromptGridSkeleton count={6} /> : null}
+          {promptState.status === "loading" && !hasVisiblePrompts ? <PromptGridSkeleton count={6} /> : null}
 
           {promptState.status === "error" ? (
             <ErrorState description={promptState.error} onRetry={loadPrompts} />
           ) : null}
 
-          {promptState.status === "success" && filteredPrompts.length === 0 ? (
+          {promptState.status === "success" && resultCount === 0 ? (
             <EmptyState
               description="Try adjusting your keywords or filters to find what you're looking for."
               onAction={handleClearFilters}
@@ -313,7 +362,7 @@ export default function MarketplaceClient() {
             />
           ) : null}
 
-          {promptState.status === "success" && filteredPrompts.length > 0 ? (
+          {promptState.status !== "error" && hasVisiblePrompts ? (
             <>
               <MotionStagger className="grid gap-4 md:grid-cols-2 desktop:grid-cols-3" preset="dashboardCardStagger">
                 {paginatedPrompts.map((prompt) => (

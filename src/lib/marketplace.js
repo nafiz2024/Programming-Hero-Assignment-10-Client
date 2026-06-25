@@ -136,6 +136,16 @@ function normalizeDifficultyLabel(value) {
   return "Beginner";
 }
 
+function normalizeVisibilityLabel(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (normalized.includes("private") || normalized.includes("premium")) {
+    return "Premium";
+  }
+
+  return "Public";
+}
+
 function parseNumber(value, fallback = 0) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -171,7 +181,7 @@ export function normalizePromptItem(item, index = 0) {
   const aiTool = item?.aiTool || item?.model || item?.tool || "ChatGPT";
   const difficulty = normalizeDifficultyLabel(item?.difficulty || item?.level || "Beginner");
   const visibilityRaw = item?.visibility || item?.access || item?.plan || "Public";
-  const visibility = String(visibilityRaw).toLowerCase().includes("premium") ? "Premium" : "Public";
+  const visibility = normalizeVisibilityLabel(visibilityRaw);
   const accentPalette = [
     "from-sky-500/30 via-cyan-500/12 to-transparent",
     "from-fuchsia-500/28 via-violet-500/12 to-transparent",

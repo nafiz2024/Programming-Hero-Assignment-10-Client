@@ -49,6 +49,7 @@ import {
 import { formatCompactNumber } from "@/lib/marketplace";
 import { recordPromptView } from "@/lib/notifications";
 import { isPremiumSubscription } from "@/lib/payments";
+import { getPromptId } from "@/lib/prompt-id";
 import {
   normalizePromptDetails,
   normalizeReviewsPayload,
@@ -161,7 +162,7 @@ function UsageCard({ index, title, description }) {
 }
 
 export default function PromptDetailsClient({ promptId }) {
-  const routePromptId = String(promptId || "");
+  const routePromptId = getPromptId(null, promptId);
   const { isAuthenticated, user } = useAuth();
   const { refreshViewedPrompts } = useNotifications();
   const pathname = usePathname();
@@ -201,7 +202,7 @@ export default function PromptDetailsClient({ promptId }) {
   const reviewFormRef = useRef(null);
   const shouldReduceMotion = useReducedMotion();
   const prompt = promptState.item;
-  const resolvedPromptId = String(prompt?._id || prompt?.id || routePromptId || "");
+  const resolvedPromptId = getPromptId(prompt, routePromptId);
   const {
     handleBookmarkToggle: togglePromptBookmark,
     isBookmarked,
@@ -426,7 +427,7 @@ export default function PromptDetailsClient({ promptId }) {
         const relatedBase = items
           .filter((item) => String(item?._id || item?.id) !== String(resolvedPromptId || routePromptId))
           .map((item, index) => ({
-            id: item?._id || item?.id || `related-${index}`,
+            id: getPromptId(item, `related-${index}`),
             title: item?.title || "Prompt",
             category: item?.category?.name || item?.categoryName || item?.category || "General",
             aiTool: item?.aiTool || item?.model || item?.tool || "ChatGPT",
