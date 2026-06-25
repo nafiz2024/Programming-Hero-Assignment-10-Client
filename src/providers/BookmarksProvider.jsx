@@ -11,9 +11,11 @@ const defaultAccent = "from-sky-500/30 via-cyan-500/12 to-transparent";
 export const BookmarksContext = createContext(undefined);
 
 function createOptimisticBookmark(prompt) {
+  const promptId = String(prompt?._id || prompt?.id || "");
+
   return {
-    id: String(prompt?.id || ""),
-    bookmarkId: `optimistic-${prompt?.id || "bookmark"}`,
+    id: promptId,
+    bookmarkId: `optimistic-${promptId || "bookmark"}`,
     title: prompt?.title || "PromptFlow prompt",
     category: prompt?.category || "General",
     aiTool: prompt?.aiTool || "ChatGPT",
@@ -117,7 +119,7 @@ export function BookmarksProvider({ children }) {
   );
 
   const addBookmark = useCallback(async (prompt) => {
-    const promptId = String(prompt?.id || "");
+    const promptId = String(prompt?._id || prompt?.id || "");
 
     if (!promptId) {
       throw new Error("Prompt id is required to add a bookmark.");
@@ -182,7 +184,7 @@ export function BookmarksProvider({ children }) {
   }, [refreshBookmarks]);
 
   const toggleBookmark = useCallback(async (prompt) => {
-    const promptId = String(prompt?.id || "");
+    const promptId = String(prompt?._id || prompt?.id || "");
 
     if (!promptId) {
       throw new Error("Prompt id is required to update a bookmark.");

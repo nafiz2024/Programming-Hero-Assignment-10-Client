@@ -13,6 +13,35 @@ import { useDashboard } from "@/hooks/useDashboard";
 import { creatorDashboardNavLinks, dashboardNavLinks } from "@/lib/navigation";
 import { toastError, toastSuccess } from "@/lib/toast";
 
+function isDashboardRouteActive(pathname, href) {
+  if (!pathname || !href) {
+    return false;
+  }
+
+  if (href === "/dashboard" || href === "/creator") {
+    return pathname === href;
+  }
+
+  if (href === "/dashboard/prompts" || href === "/creator/prompts") {
+    return pathname === href;
+  }
+
+  if (href === "/dashboard/prompts/new" || href === "/creator/prompts/new") {
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  if (href === "/dashboard/saved") {
+    return (
+      pathname === "/dashboard/saved" ||
+      pathname.startsWith("/dashboard/saved/") ||
+      pathname === "/saved-prompts" ||
+      pathname.startsWith("/saved-prompts/")
+    );
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export default function DashboardSidebar({ onNavigate }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -38,7 +67,7 @@ export default function DashboardSidebar({ onNavigate }) {
   }
 
   return (
-    <aside className="flex h-full flex-col rounded-[28px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_25px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_25px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl">
       <Link className="mb-8 inline-flex items-center gap-3" href="/">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-gradient text-white shadow-glow">
           <Sparkles className="h-5 w-5" />
@@ -51,73 +80,75 @@ export default function DashboardSidebar({ onNavigate }) {
         </div>
       </Link>
 
-      <nav className="space-y-2">
-        {navLinks.map(({ action, href, icon: Icon, label }) => {
-          if (action === "logout") {
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <nav className="space-y-2">
+          {navLinks.map(({ action, href, icon: Icon, label }) => {
+            if (action === "logout") {
+              return (
+                <button
+                  key={action}
+                  className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium text-rose-500 transition hover:bg-rose-50"
+                  onClick={handleLogout}
+                  type="button"
+                >
+                  {isLoggingOut ? <LogOut className="h-4 w-4 animate-pulse" /> : <Icon className="h-4 w-4" />}
+                  <span>{label}</span>
+                </button>
+              );
+            }
+
+            const isActive = isDashboardRouteActive(pathname, href);
+
             return (
-              <button
-                key={action}
-                className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium text-rose-500 transition hover:bg-rose-50"
-                onClick={handleLogout}
-                type="button"
+              <Link
+                key={href}
+                className={clsx(
+                  "flex min-h-[52px] items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+                  isActive
+                    ? "bg-brand-gradient text-white shadow-[0_16px_40px_rgba(99,102,241,0.28)]"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                )}
+                href={href}
+                onClick={onNavigate}
               >
-                {isLoggingOut ? <LogOut className="h-4 w-4 animate-pulse" /> : <Icon className="h-4 w-4" />}
+                <Icon className="h-4 w-4" />
                 <span>{label}</span>
-              </button>
+              </Link>
             );
-          }
+          })}
+        </nav>
 
-          const isActive = pathname === href || pathname.startsWith(`${href}/`);
-
-          return (
-            <Link
-              key={href}
-              className={clsx(
-                "flex min-h-[52px] items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
-                isActive
-                  ? "bg-brand-gradient text-white shadow-[0_16px_40px_rgba(99,102,241,0.28)]"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
-              )}
-              href={href}
-              onClick={onNavigate}
+        <div className="space-y-4 pb-1 pt-6">
+          <div className="rounded-[24px] bg-[linear-gradient(135deg,rgba(99,102,241,0.96),rgba(139,92,246,0.92),rgba(56,189,248,0.88))] p-5 text-white shadow-[0_20px_60px_rgba(99,102,241,0.25)]">
+            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/16">
+              <Crown className="h-5 w-5" />
+            </div>
+            <h3 className="text-lg font-semibold">Unlock Every Premium Prompt</h3>
+            <p className="mt-2 text-sm leading-6 text-white/80">
+              Get unlimited access to all premium prompts and advanced creator tools.
+            </p>
+            <Button
+              as={Link}
+              className="mt-5 w-full border-0 bg-white text-slate-950 hover:bg-white/90"
+              href="/pricing"
+              variant="secondary"
             >
-              <Icon className="h-4 w-4" />
-              <span>{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="mt-auto space-y-4">
-        <div className="rounded-[24px] bg-[linear-gradient(135deg,rgba(99,102,241,0.96),rgba(139,92,246,0.92),rgba(56,189,248,0.88))] p-5 text-white shadow-[0_20px_60px_rgba(99,102,241,0.25)]">
-          <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/16">
-            <Crown className="h-5 w-5" />
+              Upgrade Now
+            </Button>
           </div>
-          <h3 className="text-lg font-semibold">Unlock Every Premium Prompt</h3>
-          <p className="mt-2 text-sm leading-6 text-white/80">
-            Get unlimited access to all premium prompts and advanced creator tools.
-          </p>
-          <Button
-            as={Link}
-            className="mt-5 w-full border-0 bg-white text-slate-950 hover:bg-white/90"
-            href="/pricing"
-            variant="secondary"
-          >
-            Upgrade Now
-          </Button>
-        </div>
 
-        <div className="rounded-[24px] border border-slate-200 bg-slate-50/90 p-4">
-          <div className="flex items-center gap-3">
-            <UserAvatar
-              alt={user?.name || "PromptFlow User"}
-              className="h-12 w-12 bg-brand-gradient text-sm text-white"
-              fallback={user?.initials || "PF"}
-              src={user?.image || user?.picture || user?.photoURL || user?.avatar || user?.photo}
-            />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-950">{user?.name || "PromptFlow User"}</p>
-              <p className="text-xs text-slate-500">{user?.subscription || "Free"} plan</p>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/90 p-4">
+            <div className="flex items-center gap-3">
+              <UserAvatar
+                alt={user?.name || "PromptFlow User"}
+                className="h-12 w-12 bg-brand-gradient text-sm text-white"
+                fallback={user?.initials || "PF"}
+                src={user?.image || user?.picture || user?.photoURL || user?.avatar || user?.photo}
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-950">{user?.name || "PromptFlow User"}</p>
+                <p className="text-xs text-slate-500">{user?.subscription || "Free"} plan</p>
+              </div>
             </div>
           </div>
         </div>

@@ -161,6 +161,7 @@ function UsageCard({ index, title, description }) {
 }
 
 export default function PromptDetailsClient({ promptId }) {
+  const routePromptId = String(promptId || "");
   const { isAuthenticated, user } = useAuth();
   const { refreshViewedPrompts } = useNotifications();
   const pathname = usePathname();
@@ -200,15 +201,16 @@ export default function PromptDetailsClient({ promptId }) {
   const reviewFormRef = useRef(null);
   const shouldReduceMotion = useReducedMotion();
   const prompt = promptState.item;
+  const resolvedPromptId = String(prompt?._id || prompt?.id || routePromptId || "");
   const {
     handleBookmarkToggle: togglePromptBookmark,
     isBookmarked,
     isBookmarkLoading,
     isBookmarkReady,
-  } = usePromptBookmark(prompt);
+  } = usePromptBookmark(prompt, routePromptId);
   const isPremiumUser = isPremiumSubscription(user?.subscription);
   const isPromptLocked = Boolean(prompt?.locked && !isPremiumUser);
-  const paymentHref = `/payment?returnTo=${encodeURIComponent(pathname || `/prompts/${promptId}`)}`;
+  const paymentHref = `/payment?returnTo=${encodeURIComponent(pathname || `/prompts/${resolvedPromptId || routePromptId}`)}`;
   const [feedbackPulse, setFeedbackPulse] = useState({
     copy: 0,
     bookmark: 0,
@@ -217,13 +219,13 @@ export default function PromptDetailsClient({ promptId }) {
   function syncDashboardReviewsLocally(nextReviews) {
     const storedReviews = getStorageItem(getReviewsStorageKey(), []);
     const filteredReviews = Array.isArray(storedReviews)
-      ? storedReviews.filter((review) => String(review.promptId) !== String(promptId))
+      ? storedReviews.filter((review) => String(review.promptId) !== String(resolvedPromptId || routePromptId))
       : [];
     const latestForPrompt = nextReviews
-      .filter((review) => reviewMatchesPrompt(review, promptId))
+      .filter((review) => reviewMatchesPrompt(review, resolvedPromptId || routePromptId))
       .map((review) => ({
         id: review.id,
-        promptId: review.promptId || promptId,
+        promptId: review.promptId || resolvedPromptId || routePromptId,
         promptTitle: review.promptTitle || prompt?.title || "PromptFlow prompt",
         rating: Number(review.rating || 0),
         comment: review.comment || "",
@@ -251,6 +253,15 @@ export default function PromptDetailsClient({ promptId }) {
   }
 
   async function loadPrompt() {
+    if (!routePromptId) {
+      setPromptState({
+        status: "error",
+        item: null,
+        error: "Prompt ID missing.",
+      });
+      return;
+    }
+
     setPromptState((currentState) => ({
       ...currentState,
       status: "loading",
@@ -258,7 +269,7 @@ export default function PromptDetailsClient({ promptId }) {
     }));
 
     try {
-      const response = await promptApi.getById(promptId);
+      const response = await promptApi.getById(routePromptId);
 
       setPromptState({
         status: "success",
@@ -275,6 +286,18 @@ export default function PromptDetailsClient({ promptId }) {
   }
 
   async function loadReviews() {
+    if (!routePromptId) {
+      setReviewState({
+        status: "error",
+        items: [],
+        averageRating: 0,
+        totalReviews: 0,
+        distribution: [],
+        error: "Prompt ID missing.",
+      });
+      return;
+    }
+
     setReviewState((currentState) => ({
       ...currentState,
       status: "loading",
@@ -283,9 +306,9 @@ export default function PromptDetailsClient({ promptId }) {
     }));
 
     try {
-      const response = await reviewApi.getByPrompt(promptId);
+      const response = await reviewApi.getByPrompt(routePromptId);
       const normalized = normalizeReviewsPayload(response, {
-        promptId,
+        promptId: resolvedPromptId || routePromptId,
         promptTitle: prompt?.title || "PromptFlow prompt",
       });
 
@@ -311,9 +334,26 @@ export default function PromptDetailsClient({ promptId }) {
     let isMounted = true;
 
     async function loadPageData() {
+      if (!routePromptId) {
+        setPromptState({
+          status: "error",
+          item: null,
+          error: "Prompt ID missing.",
+        });
+        setReviewState({
+          status: "error",
+          items: [],
+          averageRating: 0,
+          totalReviews: 0,
+          distribution: [5, 4, 3, 2, 1].map((star) => ({ star, count: 0 })),
+          error: "Prompt ID missing.",
+        });
+        return;
+      }
+
       const [promptResult, reviewResult] = await Promise.allSettled([
-        promptApi.getById(promptId),
-        reviewApi.getByPrompt(promptId),
+        promptApi.getById(routePromptId),
+        reviewApi.getByPrompt(routePromptId),
       ]);
 
       if (!isMounted) {
@@ -359,7 +399,7 @@ export default function PromptDetailsClient({ promptId }) {
     return () => {
       isMounted = false;
     };
-  }, [promptId]);
+  }, [routePromptId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -384,7 +424,7 @@ export default function PromptDetailsClient({ promptId }) {
         ];
 
         const relatedBase = items
-          .filter((item) => String(item?._id || item?.id) !== String(promptId))
+          .filter((item) => String(item?._id || item?.id) !== String(resolvedPromptId || routePromptId))
           .map((item, index) => ({
             id: item?._id || item?.id || `related-${index}`,
             title: item?.title || "Prompt",
@@ -436,7 +476,7 @@ export default function PromptDetailsClient({ promptId }) {
     return () => {
       isMounted = false;
     };
-  }, [prompt?.aiTool, prompt?.category, promptId]);
+  }, [prompt?.aiTool, prompt?.category, resolvedPromptId, routePromptId]);
 
   useEffect(() => {
     if (!prompt?.id) {
@@ -454,12 +494,12 @@ export default function PromptDetailsClient({ promptId }) {
   }, [prompt?.aiTool, prompt?.category, prompt?.description, prompt?.id, prompt?.title, refreshViewedPrompts, user?.id]);
 
   const reviewSummary = useMemo(
-    () => summarizeReviews(reviewState.items.filter((review) => reviewMatchesPrompt(review, promptId))),
-    [promptId, reviewState.items],
+    () => summarizeReviews(reviewState.items.filter((review) => reviewMatchesPrompt(review, resolvedPromptId || routePromptId))),
+    [resolvedPromptId, reviewState.items, routePromptId],
   );
   const reviewsForThisPrompt = useMemo(
-    () => reviewState.items.filter((review) => reviewMatchesPrompt(review, promptId)),
-    [promptId, reviewState.items],
+    () => reviewState.items.filter((review) => reviewMatchesPrompt(review, resolvedPromptId || routePromptId)),
+    [resolvedPromptId, reviewState.items, routePromptId],
   );
   const currentUserReview =
     reviewsForThisPrompt.find((review) => reviewBelongsToUser(review, user)) || null;
@@ -483,7 +523,7 @@ export default function PromptDetailsClient({ promptId }) {
       setFeedbackPulse((currentState) => ({ ...currentState, copy: currentState.copy + 1 }));
 
       try {
-        await promptApi.copyPublic(prompt.id);
+        await promptApi.copyPublic(resolvedPromptId);
         setPromptState((currentState) => ({
           ...currentState,
           item: currentState.item
@@ -504,6 +544,11 @@ export default function PromptDetailsClient({ promptId }) {
   }
 
   async function handleBookmarkToggle(event) {
+    if (!resolvedPromptId) {
+      toastWarning("Prompt ID missing.");
+      return;
+    }
+
     if (!prompt) {
       return;
     }
@@ -547,18 +592,23 @@ export default function PromptDetailsClient({ promptId }) {
       return;
     }
 
+    if (!resolvedPromptId) {
+      toastWarning("Prompt ID missing.");
+      return;
+    }
+
     setActionState((currentState) => ({ ...currentState, review: true }));
 
     try {
-      await reviewApi.createOrUpdate(promptId, {
-        promptId,
+      await reviewApi.createOrUpdate(resolvedPromptId, {
+        promptId: resolvedPromptId,
         rating: Number(values.rating),
         comment: values.comment.trim(),
       });
       await loadPrompt();
-      const nextReviewResponse = await reviewApi.getByPrompt(promptId);
+      const nextReviewResponse = await reviewApi.getByPrompt(resolvedPromptId);
       const normalized = normalizeReviewsPayload(nextReviewResponse, {
-        promptId,
+        promptId: resolvedPromptId,
         promptTitle: prompt?.title || "PromptFlow prompt",
       });
       setReviewState({
@@ -568,7 +618,7 @@ export default function PromptDetailsClient({ promptId }) {
       });
       applyReviewSummaryToPrompt(normalized);
       syncDashboardReviewsLocally(normalized.items);
-      dispatchReviewSync(promptId);
+      dispatchReviewSync(resolvedPromptId);
       toastSuccess(currentUserReview ? "Review updated" : "Review submitted");
     } catch (error) {
       toastError(error.message || "Unable to submit your review.");
@@ -582,16 +632,21 @@ export default function PromptDetailsClient({ promptId }) {
       return;
     }
 
+    if (!resolvedPromptId) {
+      toastWarning("Prompt ID missing.");
+      return;
+    }
+
     setActionState((currentState) => ({ ...currentState, deleteReview: true }));
 
     try {
-      await reviewApi.removeForPrompt(promptId, {
+      await reviewApi.removeForPrompt(resolvedPromptId, {
         reviewId: pendingReviewDeletion.id,
       });
       await loadPrompt();
-      const nextReviewResponse = await reviewApi.getByPrompt(promptId);
+      const nextReviewResponse = await reviewApi.getByPrompt(resolvedPromptId);
       const normalized = normalizeReviewsPayload(nextReviewResponse, {
-        promptId,
+        promptId: resolvedPromptId,
         promptTitle: prompt?.title || "PromptFlow prompt",
       });
       setReviewState({
@@ -601,7 +656,7 @@ export default function PromptDetailsClient({ promptId }) {
       });
       applyReviewSummaryToPrompt(normalized);
       syncDashboardReviewsLocally(normalized.items);
-      dispatchReviewSync(promptId);
+      dispatchReviewSync(resolvedPromptId);
       setPendingReviewDeletion(null);
       toastSuccess("Review deleted");
     } catch (error) {
@@ -624,11 +679,16 @@ export default function PromptDetailsClient({ promptId }) {
       return;
     }
 
+    if (!resolvedPromptId) {
+      toastWarning("Prompt ID missing.");
+      return;
+    }
+
     setActionState((currentState) => ({ ...currentState, report: true }));
 
     try {
-      await reportApi.create(promptId, {
-        promptId,
+      await reportApi.create(resolvedPromptId, {
+        promptId: resolvedPromptId,
         reason: reportForm.reason,
         description: reportForm.description.trim(),
       });

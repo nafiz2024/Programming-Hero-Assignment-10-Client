@@ -26,6 +26,30 @@ const statusStyles = {
   rejected: "bg-rose-50 text-rose-500",
 };
 
+function ActionIconButton({ children, className = "", href, label, onPress }) {
+  const sharedClassName = `inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${className}`;
+
+  if (href) {
+    return (
+      <Link aria-label={label} className={sharedClassName} href={href} title={label}>
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      aria-label={label}
+      className={sharedClassName}
+      onClick={onPress}
+      title={label}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
 function VisibilityBadge({ prompt }) {
   const isPrivate = prompt.visibilityValue === "private";
   const Icon = isPrivate ? Lock : Globe;
@@ -129,6 +153,8 @@ export default function DashboardMyPrompts() {
   const totalPages = Math.max(1, Math.ceil(filteredPrompts.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginatedPrompts = filteredPrompts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageStart = filteredPrompts.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = filteredPrompts.length === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, filteredPrompts.length);
 
   function openEdit(prompt) {
     setEditingPrompt(prompt);
@@ -287,15 +313,27 @@ export default function DashboardMyPrompts() {
                           <p className="my-auto text-sm font-medium text-slate-600">{formatCompactNumber(prompt.copyCount)}</p>
                           <p className="my-auto text-sm text-slate-600">{prompt.createdLabel}</p>
                           <div className="my-auto flex items-center gap-2">
-                            <Button as={Link} href={`/prompts/${prompt.id}`} size="sm" variant="secondary">
+                            <ActionIconButton
+                              className="border-sky-200 bg-sky-50 text-sky-600 hover:border-sky-300 hover:bg-sky-100 hover:text-sky-700"
+                              href={`/prompts/${prompt.id}`}
+                              label={`View ${prompt.title}`}
+                            >
                               <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button onPress={() => openEdit(prompt)} size="sm" variant="secondary">
+                            </ActionIconButton>
+                            <ActionIconButton
+                              className="border-slate-200 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                              label={`Edit ${prompt.title}`}
+                              onPress={() => openEdit(prompt)}
+                            >
                               <PencilLine className="h-4 w-4" />
-                            </Button>
-                            <Button className="bg-rose-500 text-white hover:bg-rose-600" onPress={() => setDeleteTarget(prompt)} size="sm">
+                            </ActionIconButton>
+                            <ActionIconButton
+                              className="border-rose-200 bg-rose-50 text-rose-600 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-700"
+                              label={`Delete ${prompt.title}`}
+                              onPress={() => setDeleteTarget(prompt)}
+                            >
                               <Trash2 className="h-4 w-4" />
-                            </Button>
+                            </ActionIconButton>
                           </div>
                         </div>
 
@@ -325,7 +363,7 @@ export default function DashboardMyPrompts() {
 
                   <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <p className="text-sm text-slate-500">
-                      Showing 1 to {paginatedPrompts.length} of {filteredPrompts.length} prompts
+                      Showing {pageStart} to {pageEnd} of {filteredPrompts.length} prompts
                     </p>
                     <Pagination currentPage={currentPage} onPageChange={setPage} totalPages={totalPages} />
                   </div>

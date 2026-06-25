@@ -27,9 +27,9 @@ export default function Pagination({ currentPage, onPageChange, totalPages }) {
   const pages = buildPages(currentPage, totalPages);
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2">
+    <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
       <button
-        className="pf-touch-target inline-flex h-11 items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-4 text-body-sm text-muted transition hover:border-white/16 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="pf-touch-target inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-body-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:opacity-100"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
         type="button"
@@ -42,7 +42,7 @@ export default function Pagination({ currentPage, onPageChange, totalPages }) {
         page === "..." ? (
           <span
             key={`ellipsis-${index}`}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-white/10 bg-white/[0.03] text-muted"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-400"
           >
             <MoreHorizontal className="h-4 w-4" />
           </span>
@@ -50,10 +50,10 @@ export default function Pagination({ currentPage, onPageChange, totalPages }) {
           <button
             key={page}
             className={clsx(
-              "pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-md border text-body-sm font-medium transition",
+              "pf-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border text-body-sm font-semibold shadow-sm transition",
               currentPage === page
-                ? "border-primary/30 bg-brand-gradient text-white shadow-glow"
-                : "border-white/10 bg-white/[0.04] text-foreground hover:border-white/16 hover:bg-white/[0.08]",
+                ? "border-primary/30 bg-brand-gradient text-white shadow-[0_16px_34px_rgba(99,102,241,0.28)]"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950",
             )}
             onClick={() => onPageChange(page)}
             type="button"
@@ -64,7 +64,7 @@ export default function Pagination({ currentPage, onPageChange, totalPages }) {
       )}
 
       <button
-        className="pf-touch-target inline-flex h-11 items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-4 text-body-sm text-foreground transition hover:border-white/16 disabled:cursor-not-allowed disabled:opacity-50"
+        className="pf-touch-target inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-body-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:opacity-100"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
         type="button"

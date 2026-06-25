@@ -7,20 +7,25 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
 
-export function usePromptBookmark(prompt) {
+export function usePromptBookmark(prompt, fallbackPromptId = "") {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isBookmarked, status, toggleBookmark } = useBookmarks();
   const pathname = usePathname();
   const router = useRouter();
   const [isMutating, setIsMutating] = useState(false);
-  const promptId = String(prompt?.id || "");
+  const promptId = String(prompt?._id || prompt?.id || fallbackPromptId || "");
   const bookmarked = promptId ? isBookmarked(promptId) : false;
 
   async function handleBookmarkToggle(event) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
-    if (!promptId || isMutating) {
+    if (!promptId) {
+      toastWarning("Prompt ID missing.");
+      return null;
+    }
+
+    if (isMutating) {
       return null;
     }
 
@@ -37,7 +42,11 @@ export function usePromptBookmark(prompt) {
     setIsMutating(true);
 
     try {
-      const result = await toggleBookmark(prompt);
+      const result = await toggleBookmark({
+        ...prompt,
+        id: promptId,
+        _id: promptId,
+      });
       toastSuccess(result.bookmarked ? "Prompt bookmarked" : "Bookmark removed");
       return result;
     } catch (error) {
