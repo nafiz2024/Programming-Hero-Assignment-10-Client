@@ -328,6 +328,7 @@ export function normalizeAdminStats(payload, reports = []) {
     totalReviews: parseNumber(data.totalReviews, 5432),
     totalCopies: parseNumber(data.totalCopies, 98765),
     totalRevenue: parseNumber(data.totalRevenue, 28450.75),
+    totalPayments: parseNumber(data.totalPayments || data.totalTransactions, 0),
     pendingPrompts: parseNumber(data.pendingPrompts || data.pendingReviewPrompts, 12),
     openReports: parseNumber(data.openReports, openReports || 24),
     removedPrompts: parseNumber(data.removedPrompts, removedReports || 18),
@@ -385,8 +386,25 @@ export function normalizeAdminReports(payload) {
 }
 
 export function normalizeAdminActivity(payload) {
+  const latestPayments = Array.isArray(payload?.latestPayments)
+    ? payload.latestPayments.map((item) => ({
+        ...item,
+        type: item?.type || "payment",
+        title: item?.title || `${toTitleCase(item?.plan || "premium")} payment`,
+        subtitle:
+          item?.subtitle ||
+          (item?.userName
+            ? `by ${item.userName}${item?.userEmail ? ` (${item.userEmail})` : ""}`
+            : item?.userEmail || "PromptFlow customer"),
+        status: item?.status || item?.paymentStatus || "Completed",
+        amount: item?.amount ? `$${parseNumber(item.amount, 0).toFixed(2)}` : "",
+        createdAt: item?.createdAt || item?.paidAt || item?.date,
+      }))
+    : [];
   const items = Array.isArray(payload?.activities)
     ? payload.activities
+    : latestPayments.length > 0
+    ? latestPayments
     : Array.isArray(payload?.data)
     ? payload.data
     : Array.isArray(payload)

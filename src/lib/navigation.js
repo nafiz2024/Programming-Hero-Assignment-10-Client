@@ -75,7 +75,7 @@ export const adminNavLinks = [
   { href: "/admin/creators", label: "Creators", icon: UserCog },
   { href: "/admin/prompts", label: "Prompts", icon: Boxes },
   { href: "/admin/reports", label: "Reports", icon: Flag },
-  { href: "/admin/payments", label: "Payments", icon: Wallet, disabled: true },
+  { href: "/admin/payments", label: "Payments", icon: Wallet },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { action: "logout", label: "Logout", icon: LogOut },
 ];

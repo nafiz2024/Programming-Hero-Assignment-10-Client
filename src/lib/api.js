@@ -269,6 +269,10 @@ export const adminApi = {
     return apiRequest("/api/admin/stats");
   },
 
+  getPayments() {
+    return apiRequest("/api/admin/payments");
+  },
+
   getRevenue() {
     return apiRequest("/api/admin/revenue");
   },

@@ -69,6 +69,10 @@ export function normalizePayments(payload) {
     const status = String(item?.status || item?.paymentStatus || "completed")
       .replace(/[-_]/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase());
+    const userName = item?.userName || item?.customerName || item?.name || "";
+    const userEmail = item?.userEmail || item?.email || item?.customerEmail || "";
+    const currency = String(item?.currency || "usd").toUpperCase();
+    const planName = item?.planName || item?.plan || PREMIUM_PLAN.name;
 
     return {
       id: item?._id || item?.id || `payment-${index}`,
@@ -80,12 +84,19 @@ export function normalizePayments(payload) {
         `PF-${100000 + index}`,
       amount,
       status,
-      planName: item?.planName || item?.plan || PREMIUM_PLAN.name,
+      statusValue: String(item?.status || item?.paymentStatus || "completed").toLowerCase(),
+      currency,
+      userName,
+      userEmail,
+      plan: item?.plan || planName,
+      planName,
       createdAt,
       createdLabel: new Intl.DateTimeFormat("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       }).format(new Date(createdAt)),
       expiryDate:
         item?.expiryDate ||

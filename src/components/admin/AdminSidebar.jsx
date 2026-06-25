@@ -12,6 +12,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { adminNavLinks } from "@/lib/navigation";
 import { toastError, toastSuccess } from "@/lib/toast";
 
+function isAdminRouteActive(pathname, href) {
+  if (!href) {
+    return false;
+  }
+
+  if (href === "/admin") {
+    return pathname === "/admin";
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export default function AdminSidebar({ onNavigate }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,7 +73,7 @@ export default function AdminSidebar({ onNavigate }) {
             );
           }
 
-          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          const isActive = isAdminRouteActive(pathname, href);
           const baseClass = clsx(
             "flex min-h-[52px] items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
             isActive
