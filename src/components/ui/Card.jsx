@@ -11,6 +11,9 @@ export default function Card({
   footer,
   className,
   bodyClassName,
+  titleClassName,
+  descriptionClassName,
+  footerClassName,
   ...props
 }) {
   const Icon = icon || Sparkles;
@@ -23,14 +26,14 @@ export default function Card({
             <Icon className="h-4 w-4" />
           </div>
           <div className="space-y-1">
-            {title ? <h3 className="text-h3">{title}</h3> : null}
-            {description ? <p className="text-body-sm text-muted">{description}</p> : null}
+            {title ? <h3 className={clsx("text-h3", titleClassName)}>{title}</h3> : null}
+            {description ? <p className={clsx("text-body-sm text-muted", descriptionClassName)}>{description}</p> : null}
           </div>
         </div>
       )}
 
       <div className={clsx("text-body-sm text-foreground", bodyClassName)}>{children}</div>
-      {footer ? <div className="mt-5 border-t border-white/10 pt-4">{footer}</div> : null}
+      {footer ? <div className={clsx("mt-5 border-t border-white/10 pt-4", footerClassName)}>{footer}</div> : null}
     </section>
   );
 }

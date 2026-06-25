@@ -28,6 +28,12 @@ import {
   normalizeAdminStats,
 } from "@/lib/admin";
 
+const adminCardClassName =
+  "rounded-[28px] border border-slate-200 bg-none bg-white text-slate-900 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-none";
+const adminCardTitleClassName = "text-xl font-semibold tracking-[-0.02em] text-slate-950";
+const adminCardDescriptionClassName = "text-sm leading-6 text-slate-500";
+const adminCardBodyClassName = "space-y-3 text-slate-700";
+
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -80,6 +86,15 @@ function ListRow({ badgeClass, badgeLabel, icon: Icon, subtitle, title, trailing
           </span>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function DashboardEmptyState({ description, title }) {
+  return (
+    <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
+      <p className="text-sm font-semibold text-slate-900">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
     </div>
   );
 }
@@ -160,7 +175,7 @@ export default function AdminDashboard() {
 
   const recentReports = state.reports.slice(0, 5);
   const paymentActivities = state.activity.filter((item) => item.type.includes("payment")).slice(0, 5);
-  const moderationActivities = state.activity.filter((item) => !item.type.includes("payment")).slice(0, 5);
+  const pendingPromptItems = recentReports.slice(0, 5);
 
   if (state.status === "loading") {
     return <LoadingSpinner className="min-h-[50vh]" label="Loading admin dashboard" />;
@@ -203,76 +218,110 @@ export default function AdminDashboard() {
 
       <section className="grid gap-6 xl:grid-cols-3">
         <Card
-          bodyClassName="space-y-3"
-          className="rounded-[28px] border border-slate-200 bg-white text-slate-900"
+          bodyClassName={adminCardBodyClassName}
+          className={adminCardClassName}
           description="Items that likely need immediate moderation."
+          descriptionClassName={adminCardDescriptionClassName}
           icon={ClipboardList}
           title="Pending Prompts Requiring Review"
+          titleClassName={adminCardTitleClassName}
         >
-          {recentReports.slice(0, 5).map((report) => (
-            <ListRow
-              badgeClass="bg-orange-50 text-orange-600"
-              badgeLabel="Pending"
-              icon={FileText}
-              key={report.id}
-              subtitle={`by ${report.creatorName}`}
-              title={report.promptTitle}
-              trailing={formatRelativeLabel(report.reportDate)}
+          {pendingPromptItems.length > 0 ? (
+            pendingPromptItems.map((report) => (
+              <ListRow
+                badgeClass="bg-orange-50 text-orange-600"
+                badgeLabel="Pending"
+                icon={FileText}
+                key={report.id}
+                subtitle={`by ${report.creatorName}`}
+                title={report.promptTitle}
+                trailing={formatRelativeLabel(report.reportDate)}
+              />
+            ))
+          ) : (
+            <DashboardEmptyState
+              description="There are no pending prompts in the current moderation queue."
+              title="No prompts require review right now"
             />
-          ))}
+          )}
         </Card>
 
         <Card
-          bodyClassName="space-y-3"
-          className="rounded-[28px] border border-slate-200 bg-white text-slate-900"
+          bodyClassName={adminCardBodyClassName}
+          className={adminCardClassName}
           description="Latest moderation signals from users."
+          descriptionClassName={adminCardDescriptionClassName}
           icon={Flag}
           title="Recent Reports"
+          titleClassName={adminCardTitleClassName}
         >
-          {recentReports.map((report) => (
-            <ListRow
-              badgeClass={getStatusBadgeClass(report.status)}
-              badgeLabel={report.status}
-              icon={Flag}
-              key={report.id}
-              subtitle={`Reported by ${report.reportedByName}`}
-              title={report.reason}
-              trailing={formatRelativeLabel(report.reportDate)}
+          {recentReports.length > 0 ? (
+            recentReports.map((report) => (
+              <ListRow
+                badgeClass={getStatusBadgeClass(report.status)}
+                badgeLabel={report.status}
+                icon={Flag}
+                key={report.id}
+                subtitle={`Reported by ${report.reportedByName}`}
+                title={report.reason}
+                trailing={formatRelativeLabel(report.reportDate)}
+              />
+            ))
+          ) : (
+            <DashboardEmptyState
+              description="No new reports have been submitted recently."
+              title="No reports to review"
             />
-          ))}
-          <Button as={Link} className="mt-3 w-full" href="/admin/reports" variant="secondary">
+          )}
+          <Button
+            as={Link}
+            className="mt-3 w-full border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
+            href="/admin/reports"
+            variant="secondary"
+          >
             View All Reports
           </Button>
         </Card>
 
         <Card
-          bodyClassName="space-y-3"
-          className="rounded-[28px] border border-slate-200 bg-white text-slate-900"
+          bodyClassName={adminCardBodyClassName}
+          className={adminCardClassName}
           description="Recent transactions and admin activity."
+          descriptionClassName={adminCardDescriptionClassName}
           icon={DollarSign}
           title="Recent Payments"
+          titleClassName={adminCardTitleClassName}
         >
-          {(paymentActivities.length > 0 ? paymentActivities : moderationActivities).map((item) => (
-            <ListRow
-              badgeClass="bg-emerald-50 text-emerald-600"
-              badgeLabel={item.status || "Completed"}
-              icon={DollarSign}
-              key={item.id}
-              subtitle={item.subtitle || "Platform transaction"}
-              title={item.title}
-              trailing={item.amount || formatRelativeLabel(item.date)}
+          {paymentActivities.length > 0 ? (
+            paymentActivities.map((item) => (
+              <ListRow
+                badgeClass="bg-emerald-50 text-emerald-600"
+                badgeLabel={item.status || "Completed"}
+                icon={DollarSign}
+                key={item.id}
+                subtitle={item.subtitle || "Platform transaction"}
+                title={item.title}
+                trailing={item.amount || formatRelativeLabel(item.date)}
+              />
+            ))
+          ) : (
+            <DashboardEmptyState
+              description="Payment activity will appear here once new transactions are processed."
+              title="No recent payments"
             />
-          ))}
+          )}
         </Card>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card
-          bodyClassName="space-y-4"
-          className="rounded-[28px] border border-slate-200 bg-white text-slate-900"
+          bodyClassName="space-y-4 text-slate-700"
+          className={adminCardClassName}
           description="Take quick actions to keep the platform safe and high quality."
+          descriptionClassName={adminCardDescriptionClassName}
           icon={Shield}
           title="Quick Moderation"
+          titleClassName={adminCardTitleClassName}
         >
           <div className="grid gap-4 sm:grid-cols-2">
             {quickModerationCards.map((item) => (
@@ -296,11 +345,13 @@ export default function AdminDashboard() {
         </Card>
 
         <Card
-          bodyClassName="space-y-4"
-          className="rounded-[28px] border border-slate-200 bg-white text-slate-900"
+          bodyClassName="space-y-4 text-slate-700"
+          className={adminCardClassName}
           description="Platform level moderation overview."
+          descriptionClassName={adminCardDescriptionClassName}
           icon={Sparkles}
           title="Platform Overview"
+          titleClassName={adminCardTitleClassName}
         >
           <div className="space-y-3">
             {[

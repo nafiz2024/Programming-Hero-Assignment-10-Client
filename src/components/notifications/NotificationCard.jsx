@@ -58,7 +58,7 @@ export default function NotificationCard({
 
         {!notification.isRead ? (
           <Button
-            className={compact ? "h-10 px-4 text-xs" : ""}
+            className={compact ? "h-10 border-slate-200 bg-slate-100 px-4 text-xs text-slate-700 hover:bg-slate-200" : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"}
             onPress={() => onMarkRead?.(notification.id)}
             size={compact ? "sm" : "md"}
             variant="secondary"

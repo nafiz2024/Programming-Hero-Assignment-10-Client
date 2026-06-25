@@ -95,7 +95,7 @@ export default function NotificationBell({ className = "" }) {
         {isOpen ? (
         <motion.div
           animate="visible"
-          className="absolute right-0 top-[calc(100%+12px)] z-[85] w-[min(92vw,420px)] overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_28px_80px_rgba(15,23,42,0.16)]"
+          className="fixed left-1/2 top-[5.5rem] z-[140] flex max-h-[min(75vh,36rem)] w-[min(calc(100vw-1.5rem),28rem)] -translate-x-1/2 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_28px_80px_rgba(15,23,42,0.16)] sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+12px)] sm:max-h-[28rem] sm:w-[26rem] sm:translate-x-0"
           exit="exit"
           initial="hidden"
           transition={dropdownPreset.transition}
@@ -119,7 +119,7 @@ export default function NotificationBell({ className = "" }) {
             ) : null}
           </div>
 
-          <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             {status === "loading" ? (
               <NotificationPreviewSkeleton />
             ) : previewItems.length === 0 ? (
@@ -128,6 +128,7 @@ export default function NotificationBell({ className = "" }) {
                 description="You do not have any notifications yet."
                 onAction={() => setIsOpen(false)}
                 title="Nothing new right now"
+                variant="ghost"
               />
             ) : (
               previewItems.map((notification) => (
