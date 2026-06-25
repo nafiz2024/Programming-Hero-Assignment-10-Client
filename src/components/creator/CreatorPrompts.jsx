@@ -36,6 +36,33 @@ const statusStyles = {
   rejected: "bg-rose-50 text-rose-500",
 };
 
+const lightSecondaryButtonClass =
+  "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950";
+
+function ActionIconButton({ children, className = "", href, label, onPress }) {
+  const sharedClassName = `inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${className}`;
+
+  if (href) {
+    return (
+      <Link aria-label={label} className={sharedClassName} href={href} title={label}>
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      aria-label={label}
+      className={sharedClassName}
+      onClick={onPress}
+      title={label}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
 function VisibilityBadge({ prompt }) {
   const isPrivate = prompt.visibilityValue === "private";
   const Icon = isPrivate ? Lock : Globe;
@@ -116,10 +143,21 @@ function CreatorPromptCard({ onDelete, onEdit, onSelect, prompt, selected }) {
       </div>
 
       <div className="mt-5 grid grid-cols-3 gap-3">
-        <Button as={Link} href={`/prompts/${prompt.id}`} size="sm" variant="secondary">
-          View
-        </Button>
-        <Button onPress={() => onEdit(prompt)} size="sm" variant="secondary">
+          <Button
+            as={Link}
+            className={lightSecondaryButtonClass}
+            href={`/prompts/${prompt.id}`}
+            size="sm"
+            variant="secondary"
+          >
+            View
+          </Button>
+        <Button
+          className={lightSecondaryButtonClass}
+          onPress={() => onEdit(prompt)}
+          size="sm"
+          variant="secondary"
+        >
           Edit
         </Button>
         <Button className="bg-rose-500 text-white hover:bg-rose-600" onPress={() => onDelete(prompt)} size="sm">
@@ -174,7 +212,13 @@ function AnalyticsSidebar({ prompt }) {
       <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50/70 p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-lg font-semibold text-slate-950">Top Referrers</h3>
-          <Button as={Link} href={`/prompts/${prompt.id}`} size="sm" variant="secondary">
+          <Button
+            as={Link}
+            className={lightSecondaryButtonClass}
+            href={`/prompts/${prompt.id}`}
+            size="sm"
+            variant="secondary"
+          >
             View Details
           </Button>
         </div>
@@ -338,7 +382,11 @@ export default function CreatorPrompts() {
                   ))}
                 </div>
 
-                <Button as={Link} href="/creator/prompts/new">
+                <Button
+                  as={Link}
+                  className="shrink-0 whitespace-nowrap px-5"
+                  href="/creator/prompts/new"
+                >
                   <Plus className="h-4 w-4" />
                   Add New Prompt
                 </Button>
@@ -391,15 +439,27 @@ export default function CreatorPrompts() {
                             <Star className="h-4 w-4 fill-current text-amber-400" />
                           </p>
                           <div className="my-auto flex items-center gap-2">
-                            <Button as={Link} href={`/prompts/${prompt.id}`} size="sm" variant="secondary">
+                            <ActionIconButton
+                              className="border-sky-200 bg-sky-50 text-sky-600 hover:border-sky-300 hover:bg-sky-100 hover:text-sky-700"
+                              href={`/prompts/${prompt.id}`}
+                              label={`View ${prompt.title}`}
+                            >
                               <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button onPress={() => openEdit(prompt)} size="sm" variant="secondary">
+                            </ActionIconButton>
+                            <ActionIconButton
+                              className="border-slate-200 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                              label={`Edit ${prompt.title}`}
+                              onPress={() => openEdit(prompt)}
+                            >
                               <PencilLine className="h-4 w-4" />
-                            </Button>
-                            <Button className="bg-rose-500 text-white hover:bg-rose-600" onPress={() => setDeleteTarget(prompt)} size="sm">
+                            </ActionIconButton>
+                            <ActionIconButton
+                              className="border-rose-200 bg-rose-50 text-rose-600 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-700"
+                              label={`Delete ${prompt.title}`}
+                              onPress={() => setDeleteTarget(prompt)}
+                            >
                               <Trash2 className="h-4 w-4" />
-                            </Button>
+                            </ActionIconButton>
                           </div>
                         </div>
                       ))}
@@ -504,7 +564,7 @@ export default function CreatorPrompts() {
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            <Button className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onPress={() => setEditingPrompt(null)} variant="secondary">
+            <Button className={lightSecondaryButtonClass} onPress={() => setEditingPrompt(null)} variant="secondary">
               Cancel
             </Button>
             <Button isLoading={isSaving} onPress={handleSaveEdit}>
@@ -525,7 +585,7 @@ export default function CreatorPrompts() {
               This action will remove <span className="font-semibold text-slate-900">{deleteTarget.title}</span> from your creator library.
             </p>
             <div className="mt-6 flex justify-end gap-3">
-              <Button className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" onPress={() => setDeleteTarget(null)} variant="secondary">
+              <Button className={lightSecondaryButtonClass} onPress={() => setDeleteTarget(null)} variant="secondary">
                 Cancel
               </Button>
               <Button className="bg-rose-500 text-white hover:bg-rose-600" isLoading={isDeleting} onPress={handleDeletePrompt}>

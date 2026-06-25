@@ -64,6 +64,20 @@ function toTitleCase(value) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function normalizeDifficultyLabel(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (normalized === "pro" || normalized === "advanced") {
+    return "Advanced";
+  }
+
+  if (normalized === "intermediate") {
+    return "Intermediate";
+  }
+
+  return "Beginner";
+}
+
 function parseNumber(value, fallback = 0) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -131,7 +145,7 @@ export function normalizePromptDetails(payload) {
     "";
   const visibilityValue = String(prompt?.visibility || prompt?.access || "public").toLowerCase();
   const visibility = visibilityValue.includes("premium") ? "Premium" : "Public";
-  const difficulty = toTitleCase(prompt?.difficulty || prompt?.level || "Beginner");
+  const difficulty = normalizeDifficultyLabel(prompt?.difficulty || prompt?.level || "Beginner");
   const category = toTitleCase(prompt?.category?.name || prompt?.categoryName || prompt?.category || "General");
   const aiTool = toTitleCase(prompt?.aiTool || prompt?.model || prompt?.tool || "ChatGPT");
   const reviewCount = parseNumber(prompt?.reviewCount || prompt?.totalReviews || prompt?.reviewsCount, 0);

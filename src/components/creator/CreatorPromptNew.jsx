@@ -22,6 +22,9 @@ import {
 } from "@/lib/creator";
 import { toastError, toastSuccess } from "@/lib/toast";
 
+const lightSecondaryButtonClass =
+  "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950";
+
 function FieldError({ message }) {
   return message ? <p className="text-sm font-medium text-rose-500">{message}</p> : null;
 }
@@ -150,11 +153,11 @@ export default function CreatorPromptNew() {
       />
 
       <div className="flex flex-wrap gap-3">
-        <Button isLoading={isSavingDraft} onPress={handleSaveDraft} variant="secondary">
+        <Button className={lightSecondaryButtonClass} isLoading={isSavingDraft} onPress={handleSaveDraft} variant="secondary">
           <Save className="h-4 w-4" />
           Save Draft
         </Button>
-        <Button onPress={handlePreviewScroll} variant="secondary">
+        <Button className={lightSecondaryButtonClass} onPress={handlePreviewScroll} variant="secondary">
           <Eye className="h-4 w-4" />
           Preview
         </Button>
@@ -314,10 +317,10 @@ export default function CreatorPromptNew() {
               />
 
               <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-4">
-                <Button isLoading={isSavingDraft} onPress={handleSaveDraft} type="button" variant="secondary">
+                <Button className={lightSecondaryButtonClass} isLoading={isSavingDraft} onPress={handleSaveDraft} type="button" variant="secondary">
                   Save Draft
                 </Button>
-                <Button onPress={handlePreviewScroll} type="button" variant="secondary">
+                <Button className={lightSecondaryButtonClass} onPress={handlePreviewScroll} type="button" variant="secondary">
                   Preview
                 </Button>
                 <Button isLoading={isSubmitting} type="submit">
@@ -445,7 +448,7 @@ export default function CreatorPromptNew() {
                           <p className="text-base font-semibold text-slate-950">{prompt.title}</p>
                           <p className="mt-1 text-sm text-slate-500">{prompt.aiTool}</p>
                         </div>
-                        <Button onPress={() => applyTemplate(prompt)} size="sm" variant="secondary">
+                        <Button className={lightSecondaryButtonClass} onPress={() => applyTemplate(prompt)} size="sm" variant="secondary">
                           Use Template
                         </Button>
                       </div>
@@ -466,7 +469,7 @@ export default function CreatorPromptNew() {
               <p className="mt-3 text-sm leading-6 text-slate-600">
                 Private prompts are visible to premium users only and can earn more copies as creator monetization expands.
               </p>
-              <Button as={Link} className="mt-5" href="/creator" variant="secondary">
+              <Button as={Link} className={`mt-5 ${lightSecondaryButtonClass}`} href="/creator" variant="secondary">
                 Learn More
               </Button>
             </section>

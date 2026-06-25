@@ -21,6 +21,9 @@ import {
 } from "@/lib/creator";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast";
 
+const lightSecondaryButtonClass =
+  "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950";
+
 function FieldError({ message }) {
   return message ? <p className="text-sm font-medium text-rose-500">{message}</p> : null;
 }
@@ -352,11 +355,11 @@ export default function DashboardPromptNew() {
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
-                <Button isLoading={isSavingDraft} onPress={handleSaveDraft} type="button" variant="secondary">
+                <Button className={lightSecondaryButtonClass} isLoading={isSavingDraft} onPress={handleSaveDraft} type="button" variant="secondary">
                   <Save className="h-4 w-4" />
                   Save Draft
                 </Button>
-                <Button onPress={handlePreviewScroll} type="button" variant="secondary">
+                <Button className={lightSecondaryButtonClass} onPress={handlePreviewScroll} type="button" variant="secondary">
                   <Eye className="h-4 w-4" />
                   Preview
                 </Button>
@@ -466,7 +469,11 @@ export default function DashboardPromptNew() {
                   <p className="mt-1 text-sm text-slate-500">Check our prompt writing guide or contact support.</p>
                 </div>
               </div>
-              <Button className="mt-5" onPress={() => toastWarning("Guide content will be connected later.")} variant="secondary">
+              <Button
+                className={`mt-5 ${lightSecondaryButtonClass}`}
+                onPress={() => toastWarning("Guide content will be connected later.")}
+                variant="secondary"
+              >
                 View Guide
               </Button>
             </section>
@@ -483,7 +490,7 @@ export default function DashboardPromptNew() {
                   <p>Current usage: {freePromptUsage}</p>
                   <p>Estimated copies tracked: {promptPerformance.totalCopies}</p>
                 </div>
-                <Button className="mt-5" variant="secondary">
+                <Button as={Link} className={`mt-5 ${lightSecondaryButtonClass}`} href="/pricing" variant="secondary">
                   Upgrade to Premium
                 </Button>
               </section>
@@ -502,7 +509,7 @@ export default function DashboardPromptNew() {
                           <p className="font-semibold text-slate-950">{prompt.title}</p>
                           <p className="mt-1 text-sm text-slate-500">{prompt.aiTool}</p>
                         </div>
-                        <Button onPress={() => applyTemplate(prompt)} size="sm" variant="secondary">
+                        <Button className={lightSecondaryButtonClass} onPress={() => applyTemplate(prompt)} size="sm" variant="secondary">
                           Use
                         </Button>
                       </div>

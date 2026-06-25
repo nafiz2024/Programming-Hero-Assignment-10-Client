@@ -122,6 +122,20 @@ function toTitleCase(value) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function normalizeDifficultyLabel(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (normalized === "pro" || normalized === "advanced") {
+    return "Advanced";
+  }
+
+  if (normalized === "intermediate") {
+    return "Intermediate";
+  }
+
+  return "Beginner";
+}
+
 function parseNumber(value, fallback = 0) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -155,7 +169,7 @@ export function normalizePromptItem(item, index = 0) {
   const promptId = String(item?._id || item?.id || `prompt-${index}`);
   const category = item?.category?.name || item?.categoryName || item?.category || "General";
   const aiTool = item?.aiTool || item?.model || item?.tool || "ChatGPT";
-  const difficulty = toTitleCase(item?.difficulty || item?.level || "Beginner");
+  const difficulty = normalizeDifficultyLabel(item?.difficulty || item?.level || "Beginner");
   const visibilityRaw = item?.visibility || item?.access || item?.plan || "Public";
   const visibility = String(visibilityRaw).toLowerCase().includes("premium") ? "Premium" : "Public";
   const accentPalette = [

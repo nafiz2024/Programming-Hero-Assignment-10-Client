@@ -66,6 +66,30 @@ function toTitleCase(value) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function normalizeDifficultyLabel(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (normalized === "pro" || normalized === "advanced") {
+    return "Advanced";
+  }
+
+  if (normalized === "intermediate") {
+    return "Intermediate";
+  }
+
+  return "Beginner";
+}
+
+function toBackendDifficulty(value) {
+  const normalized = normalizeDifficultyLabel(value).toLowerCase();
+
+  if (normalized === "advanced") {
+    return "pro";
+  }
+
+  return normalized;
+}
+
 function normalizeVisibility(value) {
   const normalized = String(value || "").toLowerCase();
   return normalized.includes("private") || normalized.includes("premium") ? "private" : "public";
@@ -217,8 +241,8 @@ export function normalizeCreatorPrompt(item, index = 0, user = null) {
     tags,
     tagsText: tags.join(", "),
     content,
-    difficulty: toTitleCase(item?.difficulty || item?.level || base.difficulty || "Beginner"),
-    difficultyValue: toTitleCase(item?.difficulty || item?.level || base.difficulty || "Beginner"),
+    difficulty: normalizeDifficultyLabel(item?.difficulty || item?.level || base.difficulty || "Beginner"),
+    difficultyValue: normalizeDifficultyLabel(item?.difficulty || item?.level || base.difficulty || "Beginner"),
     visibility,
     visibilityValue,
     status,
@@ -408,7 +432,7 @@ export function toCreatorPromptPayload(values, user, existingPrompt) {
     category: values.category,
     aiTool: values.aiTool,
     tags,
-    difficulty: values.difficulty,
+    difficulty: toBackendDifficulty(values.difficulty),
     visibility: values.visibility === "private" ? "private" : "public",
     thumbnail: values.thumbnail?.trim() || undefined,
     content: values.content.trim(),
