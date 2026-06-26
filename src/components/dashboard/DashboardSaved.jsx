@@ -22,7 +22,7 @@ import { toastError, toastSuccess } from "@/lib/toast";
 
 const PAGE_SIZE = 8;
 
-function SavedPromptsEmptyState() {
+function SavedPromptsEmptyState({ hasBookmarks = false }) {
   return (
     <div className="flex flex-col items-center gap-5 rounded-[28px] border border-dashed border-slate-200 bg-slate-50/70 px-6 py-12 text-center">
       <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-[#625BF6]/10 text-[#625BF6] shadow-[0_18px_40px_rgba(98,91,246,0.18)]">
@@ -30,15 +30,17 @@ function SavedPromptsEmptyState() {
       </div>
       <div className="space-y-2">
         <h3 className="text-2xl font-semibold tracking-[-0.03em] text-slate-950">
-          No saved prompts yet
+          {hasBookmarks ? "No prompts match this search" : "No saved prompts yet"}
         </h3>
         <p className="max-w-md text-base text-slate-500">
-          Save prompts to access them later.
+          {hasBookmarks ? "Try a different search term or sort option." : "Save prompts to access them later."}
         </p>
       </div>
-      <Button as={Link} href="/prompts">
-        Browse Prompts
-      </Button>
+      {!hasBookmarks ? (
+        <Button as={Link} href="/prompts">
+          Browse Prompts
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -148,7 +150,7 @@ export default function DashboardSaved() {
 
             <div className="mt-6">
               {filteredBookmarks.length === 0 ? (
-                <SavedPromptsEmptyState />
+                <SavedPromptsEmptyState hasBookmarks={items.length > 0} />
               ) : (
                 <>
                   <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">

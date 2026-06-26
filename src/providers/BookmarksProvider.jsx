@@ -3,9 +3,9 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
-import { bookmarkApi } from "@/lib/api";
+import { bookmarkApi, promptApi } from "@/lib/api";
 import { getPromptId } from "@/lib/prompt-id";
-import { normalizeSavedPrompts } from "@/lib/saved-prompts";
+import { getBookmarkItems, normalizeSavedPrompts, resolvePromptId } from "@/lib/saved-prompts";
 
 const defaultAccent = "from-sky-500/30 via-cyan-500/12 to-transparent";
 
@@ -16,18 +16,66 @@ function createOptimisticBookmark(prompt) {
 
   return {
     id: promptId,
+    _id: promptId,
     bookmarkId: `optimistic-${promptId || "bookmark"}`,
     title: prompt?.title || "PromptFlow prompt",
+    description:
+      prompt?.description || "High-quality prompt content preview from the PromptFlow marketplace.",
     category: prompt?.category || "General",
     aiTool: prompt?.aiTool || "ChatGPT",
-    author: prompt?.author || "PromptFlow Creator",
+    creatorName: prompt?.creatorName || prompt?.author || "PromptFlow Creator",
+    author: prompt?.creatorName || prompt?.author || "PromptFlow Creator",
     savedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
     rating: Number(prompt?.rating || 0),
     copyCount: Number(prompt?.copyCount || 0),
     visibility: prompt?.visibility || "Public",
-    thumbnailUrl: prompt?.thumbnailUrl || "",
+    thumbnail: prompt?.thumbnail || prompt?.thumbnailUrl || "",
+    thumbnailUrl: prompt?.thumbnail || prompt?.thumbnailUrl || "",
     accent: prompt?.accent || defaultAccent,
   };
+}
+
+async function hydrateBookmarkResponse(response) {
+  const bookmarks = getBookmarkItems(response);
+
+  if (bookmarks.length === 0) {
+    return [];
+  }
+
+  const missingPromptIds = [
+    ...new Set(
+      bookmarks
+        .filter((bookmark) => !bookmark?.prompt)
+        .map((bookmark) => resolvePromptId(bookmark))
+        .filter(Boolean),
+    ),
+  ];
+
+  if (missingPromptIds.length === 0) {
+    return normalizeSavedPrompts(response);
+  }
+
+  const promptResults = await Promise.all(
+    missingPromptIds.map(async (promptId) => {
+      try {
+        const promptResponse = await promptApi.getById(promptId);
+        const prompt = Array.isArray(promptResponse?.data)
+          ? promptResponse.data[0]
+          : promptResponse?.data || promptResponse?.prompt || promptResponse;
+
+        return [promptId, prompt];
+      } catch {
+        return [promptId, null];
+      }
+    }),
+  );
+
+  const promptCatalog = promptResults
+    .map(([, prompt]) => prompt)
+    .filter(Boolean);
+
+  return normalizeSavedPrompts(response, promptCatalog);
 }
 
 export function BookmarksProvider({ children }) {
@@ -65,7 +113,7 @@ export function BookmarksProvider({ children }) {
 
     try {
       const response = await bookmarkApi.getAll();
-      const items = normalizeSavedPrompts(response);
+      const items = await hydrateBookmarkResponse(response);
 
       setState({
         status: "success",
@@ -141,9 +189,7 @@ export function BookmarksProvider({ children }) {
 
     try {
       const response = await bookmarkApi.create(promptId);
-      refreshBookmarks().catch(() => {
-        // The optimistic state is already correct.
-      });
+      await refreshBookmarks();
       return response;
     } catch (error) {
       setState((currentState) => ({
@@ -169,9 +215,7 @@ export function BookmarksProvider({ children }) {
 
     try {
       const response = await bookmarkApi.remove(normalizedPromptId);
-      refreshBookmarks().catch(() => {
-        // The optimistic state is already correct.
-      });
+      await refreshBookmarks();
       return response;
     } catch (error) {
       if (previousBookmark) {

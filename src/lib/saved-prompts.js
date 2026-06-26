@@ -123,6 +123,10 @@ function parseNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function resolvePromptId(source, fallback = "") {
+  return String(source?._id || source?.id || source?.promptId || fallback || "").trim();
+}
+
 function toTitleCase(value) {
   if (!value) {
     return "";
@@ -133,6 +137,26 @@ function toTitleCase(value) {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function getBookmarkItems(payload) {
+  if (Array.isArray(payload?.bookmarks)) {
+    return payload.bookmarks;
+  }
+
+  if (Array.isArray(payload?.data?.bookmarks)) {
+    return payload.data.bookmarks;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  return [];
 }
 
 function createFallbackSavedPrompt(prompt, index) {
@@ -153,20 +177,14 @@ export function createSavedPromptFallbacks(promptCatalog = []) {
 }
 
 export function normalizeSavedPrompts(payload, promptCatalog = []) {
-  const bookmarks = Array.isArray(payload?.bookmarks)
-    ? payload.bookmarks
-    : Array.isArray(payload?.data)
-    ? payload.data
-    : Array.isArray(payload)
-    ? payload
-    : [];
+  const bookmarks = getBookmarkItems(payload);
 
   return bookmarks
     .map((bookmark, index) => {
-      const promptId = bookmark?.promptId || bookmark?._id || bookmark?.id;
+      const promptId = resolvePromptId(bookmark);
       const promptSource =
         bookmark?.prompt ||
-        promptCatalog.find((prompt) => prompt.id === promptId || prompt._id === promptId);
+        promptCatalog.find((prompt) => resolvePromptId(prompt) === promptId);
 
       if (!promptSource) {
         return null;
@@ -174,36 +192,49 @@ export function normalizeSavedPrompts(payload, promptCatalog = []) {
 
       const prompt = normalizePromptPayload({ prompts: [promptSource] })[0];
       const visibility = bookmark?.visibility || promptSource?.visibility || prompt.visibility || "Public";
+      const promptDetails = bookmark?.prompt || promptSource;
+      const creatorName =
+        promptDetails?.creatorName ||
+        promptDetails?.creator?.name ||
+        promptDetails?.author?.name ||
+        prompt.author ||
+        "PromptFlow Creator";
+      const thumbnail =
+        promptDetails?.thumbnail ||
+        promptDetails?.thumbnailUrl ||
+        promptDetails?.image ||
+        promptDetails?.coverImage ||
+        bookmark?.thumbnail ||
+        "";
 
       return {
         ...prompt,
-        id: prompt.id || promptId || `saved-prompt-${index + 1}`,
+        id: resolvePromptId(promptDetails, promptId || `saved-prompt-${index + 1}`),
+        _id: resolvePromptId(promptDetails, promptId || `saved-prompt-${index + 1}`),
         bookmarkId: bookmark?._id || bookmark?.id || `bookmark-${index + 1}`,
         title: prompt.title || promptSource?.title || `Saved Prompt ${index + 1}`,
+        description:
+          promptDetails?.description ||
+          prompt.description ||
+          "High-quality prompt content preview from the PromptFlow marketplace.",
         category: toTitleCase(prompt.category || promptSource?.category?.name || promptSource?.category || "General"),
         aiTool: toTitleCase(prompt.aiTool || promptSource?.aiTool || promptSource?.tool || "ChatGPT"),
-        author:
-          prompt.author ||
-          promptSource?.creator?.name ||
-          promptSource?.author?.name ||
-          promptSource?.creatorName ||
-          "PromptFlow Creator",
+        creatorName,
+        author: creatorName,
         savedAt: bookmark?.createdAt || bookmark?.savedAt || bookmark?.updatedAt || promptSource?.createdAt,
+        createdAt: bookmark?.createdAt || bookmark?.savedAt || bookmark?.updatedAt || promptSource?.createdAt,
         rating: parseNumber(bookmark?.rating || prompt.rating || promptSource?.averageRating, 4.8),
         copyCount: parseNumber(bookmark?.copyCount || prompt.copyCount || promptSource?.copies, 0),
         visibility: String(visibility).toLowerCase().includes("private") ? "Private" : "Public",
-        thumbnailUrl:
-          bookmark?.thumbnail ||
-          promptSource?.thumbnail ||
-          promptSource?.thumbnailUrl ||
-          promptSource?.image ||
-          promptSource?.coverImage ||
-          "",
+        thumbnail,
+        thumbnailUrl: thumbnail,
         accent: prompt.accent || thumbnailPalette[index % thumbnailPalette.length],
       };
     })
     .filter(Boolean);
 }
+
+export { getBookmarkItems, resolvePromptId };
 
 export function filterSavedPrompts(prompts, searchValue) {
   const query = searchValue.trim().toLowerCase();

@@ -32,9 +32,11 @@ function Thumbnail({ accent, title, thumbnailUrl }) {
 }
 
 export default function SavedPromptCard({ prompt, onRemove }) {
+  const creatorName = prompt.creatorName || prompt.author || "PromptFlow Creator";
+
   return (
     <article className="rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_70px_rgba(98,91,246,0.12)] md:p-5">
-      <Thumbnail accent={prompt.accent} thumbnailUrl={prompt.thumbnailUrl} title={prompt.title} />
+      <Thumbnail accent={prompt.accent} thumbnailUrl={prompt.thumbnail || prompt.thumbnailUrl} title={prompt.title} />
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -50,7 +52,7 @@ export default function SavedPromptCard({ prompt, onRemove }) {
           <h3 className="line-clamp-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">
             {prompt.title}
           </h3>
-          <p className="mt-2 text-sm text-slate-600">By {prompt.author}</p>
+          <p className="mt-2 text-sm text-slate-600">By {creatorName}</p>
           <p className="mt-1 text-sm text-slate-500">
             Saved on {formatDashboardDate(prompt.savedAt)}
           </p>
