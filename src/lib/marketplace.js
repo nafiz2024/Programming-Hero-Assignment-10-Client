@@ -155,9 +155,13 @@ function parseNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function getPromptItems(payload) {
+export function getPromptItems(payload) {
   if (Array.isArray(payload)) {
     return payload;
+  }
+
+  if (Array.isArray(payload?.data?.prompts)) {
+    return payload.data.prompts;
   }
 
   if (Array.isArray(payload?.data)) {
@@ -166,6 +170,10 @@ function getPromptItems(payload) {
 
   if (Array.isArray(payload?.prompts)) {
     return payload.prompts;
+  }
+
+  if (Array.isArray(payload?.results)) {
+    return payload.results;
   }
 
   if (Array.isArray(payload?.result)) {
@@ -211,9 +219,10 @@ export function normalizePromptItem(item, index = 0) {
   };
 }
 
-export function normalizePromptPayload(payload) {
+export function normalizePromptPayload(payload, options = {}) {
+  const { fallbackOnEmpty = true } = options;
   const items = getPromptItems(payload).map(normalizePromptItem);
-  return items.length > 0 ? items : fallbackPrompts;
+  return items.length > 0 || !fallbackOnEmpty ? items : fallbackPrompts;
 }
 
 export function formatCompactNumber(value) {

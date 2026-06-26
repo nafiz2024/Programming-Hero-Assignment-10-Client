@@ -21,6 +21,7 @@ import {
   defaultMarketplaceFilters,
   filterPrompts,
   formatCompactNumber,
+  getPromptItems,
   getPaginatedPrompts,
   marketplaceFilterOptions,
   normalizePromptPayload,
@@ -106,6 +107,40 @@ function getCounts(prompts) {
   };
 }
 
+function getPromptResponseMeta(response, fallbackLimit = PAGE_SIZE) {
+  const promptItems = getPromptItems(response);
+  const pagination = response?.pagination || response?.data?.pagination || null;
+  const hasServerPagination = Boolean(
+    pagination &&
+      (pagination.totalPages !== undefined ||
+        pagination.total !== undefined ||
+        pagination.page !== undefined ||
+        pagination.limit !== undefined),
+  );
+  const limit = Number(pagination?.limit || response?.limit || response?.pageSize || fallbackLimit);
+  const total = Number(
+    pagination?.total ||
+      response?.total ||
+      response?.count ||
+      response?.totalCount ||
+      response?.data?.total ||
+      promptItems.length,
+  );
+  const totalPages = Number(
+    pagination?.totalPages ||
+      response?.totalPages ||
+      response?.data?.totalPages ||
+      Math.max(1, Math.ceil((total || promptItems.length) / Math.max(limit, 1))),
+  );
+
+  return {
+    promptItems,
+    hasServerPagination,
+    total,
+    totalPages: Math.max(1, totalPages || 1),
+  };
+}
+
 export default function MarketplaceClient() {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const isDesktop = useMediaQuery("(min-width: 1200px)");
@@ -136,8 +171,14 @@ export default function MarketplaceClient() {
 
     try {
       const response = await promptApi.getAll(buildMarketplaceQuery(activeFilters, activePage));
-      const normalizedPrompts = await enrichPromptsWithReviewSummaries(normalizePromptPayload(response));
-      const hasServerPagination = Boolean(response?.pagination);
+      const { hasServerPagination, promptItems, total, totalPages } = getPromptResponseMeta(response);
+      const normalizedPrompts = await enrichPromptsWithReviewSummaries(
+        normalizePromptPayload({ prompts: promptItems }, { fallbackOnEmpty: false }),
+      );
+      const filteredPrompts = sortPrompts(filterPrompts(normalizedPrompts, activeFilters), activeFilters.sortBy);
+      const currentItems = hasServerPagination
+        ? normalizedPrompts
+        : getPaginatedPrompts(filteredPrompts, activePage, PAGE_SIZE);
 
       if (requestSequenceRef.current !== requestId) {
         return;
@@ -145,11 +186,11 @@ export default function MarketplaceClient() {
 
       setPromptState({
         status: "success",
-        items: hasServerPagination ? normalizedPrompts : getPaginatedPrompts(sortPrompts(filterPrompts(normalizedPrompts, activeFilters), activeFilters.sortBy), activePage, PAGE_SIZE),
-        allItems: normalizedPrompts,
+        items: currentItems,
+        allItems: hasServerPagination ? [] : normalizedPrompts,
         isServerPaginated: hasServerPagination,
-        total: hasServerPagination ? Number(response?.pagination?.total || normalizedPrompts.length) : sortPrompts(filterPrompts(normalizedPrompts, activeFilters), activeFilters.sortBy).length,
-        totalPages: hasServerPagination ? Math.max(1, Number(response?.pagination?.totalPages || 1)) : Math.max(1, Math.ceil(sortPrompts(filterPrompts(normalizedPrompts, activeFilters), activeFilters.sortBy).length / PAGE_SIZE)),
+        total: hasServerPagination ? total : filteredPrompts.length,
+        totalPages: hasServerPagination ? totalPages : Math.max(1, Math.ceil(filteredPrompts.length / PAGE_SIZE)),
         error: "",
       });
     } catch (error) {
