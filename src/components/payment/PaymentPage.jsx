@@ -25,7 +25,13 @@ import ErrorState from "@/components/ui/ErrorState";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/hooks/useAuth";
 import { paymentApi } from "@/lib/api";
-import { buildPaymentPayload, isPremiumSubscription, PREMIUM_PLAN } from "@/lib/payments";
+import {
+  buildCheckoutReturnUrls,
+  buildPaymentPayload,
+  getPremiumRedirectTarget,
+  isPremiumSubscription,
+  PREMIUM_PLAN,
+} from "@/lib/payments";
 import { toastError, toastWarning } from "@/lib/toast";
 
 const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
@@ -93,7 +99,7 @@ function PaymentPageContent() {
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") || "";
+  const returnTo = getPremiumRedirectTarget(searchParams.get("returnTo") || "");
   const wasPaymentCancelled = searchParams.get("payment") === "cancelled";
   const cancelledMessage = "Stripe checkout was cancelled before payment completed.";
   const [values, setValues] = useState({
@@ -159,7 +165,10 @@ function PaymentPageContent() {
         hasPublishableKey: Boolean(STRIPE_PUBLISHABLE_KEY),
       });
 
-      const sessionResponse = await paymentApi.createCheckoutSession(buildPaymentPayload(values, user));
+      const checkoutReturnUrls = buildCheckoutReturnUrls(returnTo);
+      const sessionResponse = await paymentApi.createCheckoutSession(
+        buildPaymentPayload(values, user, checkoutReturnUrls),
+      );
 
       console.info("[payment] Stripe checkout session created", {
         sessionId: sessionResponse?.sessionId,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useEffectEvent, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { BadgeCheck, CalendarDays, Check, CreditCard, Crown, ShieldCheck } from "lucide-react";
 
 import MotionReveal from "@/components/shared/MotionReveal";
@@ -68,40 +68,80 @@ function StatusSummary({ payments, user }) {
 }
 
 function PremiumPageContent() {
-  const { refreshUser, user } = useAuth();
+  const { loading: authLoading, refreshUser, user } = useAuth();
   const searchParams = useSearchParams();
   const [state, setState] = useState({
     status: "loading",
     error: "",
     payments: [],
   });
+  const [confirmation, setConfirmation] = useState({
+    status: "idle",
+    error: "",
+    transactionId: "",
+  });
   const isPremium = isPremiumSubscription(user?.subscription);
   const returnTo = getPremiumRedirectTarget(searchParams.get("returnTo") || "");
   const paymentSuccess = searchParams.get("payment") === "success";
   const sessionId = searchParams.get("session_id") || "";
   const checkoutHref = `/payment?returnTo=${encodeURIComponent(returnTo)}`;
-  const [transactionId, setTransactionId] = useState("");
-  const refreshUserAfterPayment = useEffectEvent(async () => {
-    await refreshUser();
-  });
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     let isMounted = true;
 
     async function loadPayments() {
+      setState((currentState) => ({
+        ...currentState,
+        status: "loading",
+        error: "",
+      }));
+
       try {
         if (paymentSuccess && sessionId) {
+          if (isMounted) {
+            setConfirmation({
+              status: "processing",
+              error: "",
+              transactionId: "",
+            });
+          }
+
           console.info("[payment] Finalizing Stripe checkout session", { sessionId });
           const finalizeResponse = await paymentApi.finalizeCheckoutSession({ sessionId });
-          await refreshUserAfterPayment();
+          await refreshUser({ preserveUser: true });
+
+          const nextTransactionId = finalizeResponse?.transactionId || "";
 
           if (isMounted) {
-            setTransactionId(finalizeResponse?.transactionId || "");
+            setConfirmation({
+              status: "success",
+              error: "",
+              transactionId: nextTransactionId,
+            });
           }
 
           console.info("[payment] Stripe checkout finalized", {
             sessionId,
-            transactionId: finalizeResponse?.transactionId,
+            transactionId: nextTransactionId,
+          });
+
+          if (typeof window !== "undefined") {
+            const nextParams = new URLSearchParams(window.location.search);
+            nextParams.delete("payment");
+            nextParams.delete("session_id");
+            const nextQuery = nextParams.toString();
+            const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+            window.history.replaceState(null, "", nextUrl);
+          }
+        } else if (isMounted) {
+          setConfirmation({
+            status: "idle",
+            error: "",
+            transactionId: "",
           });
         }
 
@@ -118,17 +158,27 @@ function PremiumPageContent() {
           });
         }
       } catch (error) {
+        const errorMessage = error.message || "Unable to load payment history.";
+
         console.error("[payment] Unable to finalize or load payment history", {
-          message: error?.message,
+          message: errorMessage,
           status: error?.status,
           data: error?.data,
           sessionId,
         });
 
         if (isMounted) {
+          if (paymentSuccess && sessionId) {
+            setConfirmation({
+              status: "error",
+              error: errorMessage,
+              transactionId: "",
+            });
+          }
+
           setState({
             status: "error",
-            error: error.message || "Unable to load payment history.",
+            error: errorMessage,
             payments: [],
           });
         }
@@ -140,17 +190,29 @@ function PremiumPageContent() {
     return () => {
       isMounted = false;
     };
-  }, [paymentSuccess, sessionId]);
+  }, [authLoading, paymentSuccess, refreshUser, sessionId]);
 
   const latestPayment = useMemo(() => state.payments[0] || null, [state.payments]);
+  const showSuccessState =
+    confirmation.status === "success" || (isPremium && Boolean(latestPayment || confirmation.transactionId));
 
-  if (state.status === "loading") {
+  if (authLoading || state.status === "loading") {
     return <LoadingSpinner className="min-h-[50vh]" label="Loading premium status" />;
   }
 
   return (
     <PageContainer className="space-y-8 py-10 md:py-14" size="xl">
-      {paymentSuccess ? (
+      {confirmation.status === "error" ? (
+        <MotionReveal preset="contentFade">
+          <ErrorState
+            description={confirmation.error}
+            onRetry={null}
+            title="Unable to confirm payment"
+          />
+        </MotionReveal>
+      ) : null}
+
+      {showSuccessState ? (
         <MotionReveal preset="contentFade">
           <div className="rounded-[28px] border border-emerald-200 bg-emerald-50 p-5 shadow-[0_18px_50px_rgba(16,185,129,0.08)]">
             <div className="flex items-start gap-4">
@@ -165,7 +227,7 @@ function PremiumPageContent() {
                   Your PromptFlow premium access is now active and ready to use across locked prompts.
                 </p>
                 <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-emerald-700/70">
-                  Transaction ID: {transactionId || latestPayment?.transactionId || "Processing"}
+                  Transaction ID: {confirmation.transactionId || latestPayment?.transactionId || "Processing"}
                 </p>
               </div>
             </div>
