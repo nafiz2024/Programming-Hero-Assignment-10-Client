@@ -11,7 +11,7 @@ import { toastWarning } from "@/lib/toast";
 export default function RoleRoute({ allowedRoles = [], children, redirectTo = "/" }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading } = useAuth();
   const lastBlockedPathRef = useRef("");
   const userRole = normalizeRole(user?.role);
   const normalizedAllowedRoles = useMemo(
@@ -26,7 +26,7 @@ export default function RoleRoute({ allowedRoles = [], children, redirectTo = "/
       return;
     }
 
-    if (!isAuthenticated) {
+    if (!user) {
       router.replace("/login");
       return;
     }
@@ -42,13 +42,13 @@ export default function RoleRoute({ allowedRoles = [], children, redirectTo = "/
     }
 
     lastBlockedPathRef.current = "";
-  }, [forbiddenRedirect, isAllowed, isAuthenticated, loading, pathname, router]);
+  }, [forbiddenRedirect, isAllowed, loading, pathname, router, user]);
 
   if (loading) {
     return <GlobalLoader label="Checking access" />;
   }
 
-  if (!isAuthenticated || !isAllowed) {
+  if (!user || !isAllowed) {
     return null;
   }
 

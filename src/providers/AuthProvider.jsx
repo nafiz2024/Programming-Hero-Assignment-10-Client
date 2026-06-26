@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, startTransition, useEffect, useState } from "react";
+import { createContext, startTransition, useCallback, useEffect, useRef, useState } from "react";
 
 import { authApi, userApi } from "@/lib/api";
 import { normalizeAuthUser } from "@/lib/auth";
@@ -10,31 +10,52 @@ export const AuthContext = createContext(undefined);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const refreshRequestIdRef = useRef(0);
+  const userRef = useRef(null);
 
-  async function refreshUser() {
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  const refreshUser = useCallback(async ({ preserveUser = false } = {}) => {
+    const requestId = refreshRequestIdRef.current + 1;
+    refreshRequestIdRef.current = requestId;
+
     try {
       const currentUser = normalizeAuthUser(await userApi.getMe());
-      setUser(currentUser);
+      if (refreshRequestIdRef.current === requestId) {
+        setUser(currentUser);
+      }
+
       return currentUser;
     } catch {
-      setUser(null);
-      return null;
+      if (refreshRequestIdRef.current === requestId && !preserveUser) {
+        setUser(null);
+      }
+
+      return preserveUser ? userRef.current : null;
     }
-  }
+  }, []);
 
   async function signUp(nameOrPayload, email, password, extras = {}) {
     const payload =
       typeof nameOrPayload === "object"
         ? nameOrPayload
         : { name: nameOrPayload, email, password, ...extras };
-    const response = await authApi.signUp(payload);
-    const responseUser = normalizeAuthUser(response);
+    setLoading(true);
 
-    if (responseUser) {
-      setUser(responseUser);
+    try {
+      const response = await authApi.signUp(payload);
+      const responseUser = normalizeAuthUser(response);
+
+      if (responseUser) {
+        setUser(responseUser);
+      }
+
+      return (await refreshUser({ preserveUser: Boolean(responseUser) })) || responseUser;
+    } finally {
+      setLoading(false);
     }
-
-    return (await refreshUser()) || responseUser;
   }
 
   async function signIn(emailOrPayload, password) {
@@ -42,21 +63,31 @@ export function AuthProvider({ children }) {
       typeof emailOrPayload === "object"
         ? emailOrPayload
         : { email: emailOrPayload, password };
-    const response = await authApi.signIn(payload);
-    const responseUser = normalizeAuthUser(response);
+    setLoading(true);
 
-    if (responseUser) {
-      setUser(responseUser);
+    try {
+      const response = await authApi.signIn(payload);
+      const responseUser = normalizeAuthUser(response);
+
+      if (responseUser) {
+        setUser(responseUser);
+      }
+
+      return (await refreshUser({ preserveUser: Boolean(responseUser) })) || responseUser;
+    } finally {
+      setLoading(false);
     }
-
-    return (await refreshUser()) || responseUser;
   }
 
   async function signOut() {
+    setLoading(true);
+
     try {
       await authApi.signOut();
     } finally {
+      refreshRequestIdRef.current += 1;
       setUser(null);
+      setLoading(false);
     }
   }
 
@@ -74,7 +105,7 @@ export function AuthProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshUser]);
 
   const value = {
     user,

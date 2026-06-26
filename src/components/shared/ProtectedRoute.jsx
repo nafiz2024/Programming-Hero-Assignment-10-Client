@@ -8,19 +8,19 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter();
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, user } = useAuth();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!loading && !user) {
       router.replace("/login");
     }
-  }, [isAuthenticated, loading, router]);
+  }, [loading, router, user]);
 
   if (loading) {
     return <GlobalLoader label="Authenticating" />;
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null;
   }
 
