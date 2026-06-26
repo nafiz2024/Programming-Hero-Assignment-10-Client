@@ -26,7 +26,6 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/hooks/useAuth";
 import { paymentApi } from "@/lib/api";
 import {
-  buildCheckoutReturnUrls,
   buildPaymentPayload,
   getPremiumRedirectTarget,
   isPremiumSubscription,
@@ -165,10 +164,7 @@ function PaymentPageContent() {
         hasPublishableKey: Boolean(STRIPE_PUBLISHABLE_KEY),
       });
 
-      const checkoutReturnUrls = buildCheckoutReturnUrls(returnTo);
-      const sessionResponse = await paymentApi.createCheckoutSession(
-        buildPaymentPayload(values, user, checkoutReturnUrls),
-      );
+      const sessionResponse = await paymentApi.createCheckoutSession(buildPaymentPayload(values, user, { returnTo }));
 
       console.info("[payment] Stripe checkout session created", {
         sessionId: sessionResponse?.sessionId,

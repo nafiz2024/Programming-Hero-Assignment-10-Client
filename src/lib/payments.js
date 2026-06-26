@@ -52,31 +52,6 @@ export function getPremiumRedirectTarget(returnTo) {
   return returnTo;
 }
 
-function buildClientUrl(pathname) {
-  if (typeof window === "undefined") {
-    return pathname;
-  }
-
-  return `${window.location.origin}${pathname}`;
-}
-
-export function buildCheckoutReturnUrls(returnTo = "") {
-  const safeReturnTo = getPremiumRedirectTarget(returnTo);
-  const successParams = new URLSearchParams({
-    payment: "success",
-    session_id: "{CHECKOUT_SESSION_ID}",
-  });
-  const cancelParams = new URLSearchParams({
-    payment: "cancelled",
-  });
-
-  return {
-    successUrl: buildClientUrl(`/premium?${successParams.toString()}`),
-    cancelUrl: buildClientUrl(`/premium?${cancelParams.toString()}`),
-    returnTo: safeReturnTo,
-  };
-}
-
 export function normalizePayments(payload) {
   const items = Array.isArray(payload)
     ? payload
@@ -139,8 +114,6 @@ export function buildPaymentPayload(values, user, options = {}) {
     billingEmail: values.billingEmail.trim() || user?.email || "",
     billingName: values.nameOnCard.trim() || user?.name || "",
     currency: "usd",
-    successUrl: options.successUrl || undefined,
-    cancelUrl: options.cancelUrl || undefined,
     returnTo: options.returnTo || undefined,
   };
 }
