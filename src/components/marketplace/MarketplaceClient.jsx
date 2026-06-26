@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Filter, LoaderCircle, SlidersHorizontal } from "lucide-react";
 
 import MotionReveal from "@/components/shared/MotionReveal";
-import { MotionStagger, MotionStaggerItem } from "@/components/shared/MotionStagger";
 import MarketplaceFilterPanel from "@/components/marketplace/MarketplaceFilterPanel";
 import PromptCard from "@/components/marketplace/PromptCard";
 import Button from "@/components/ui/Button";
@@ -405,13 +404,16 @@ export default function MarketplaceClient() {
 
           {promptState.status !== "error" && hasVisiblePrompts ? (
             <>
-              <MotionStagger className="grid gap-4 md:grid-cols-2 desktop:grid-cols-3" preset="dashboardCardStagger">
+              <div
+                className="grid gap-4 md:grid-cols-2 desktop:grid-cols-3"
+                key={`${currentPage}-${paginatedPrompts.map((prompt) => prompt.id).join("-")}`}
+              >
                 {paginatedPrompts.map((prompt) => (
-                  <MotionStaggerItem key={prompt.id}>
+                  <div key={prompt.id}>
                     <PromptCard {...prompt} />
-                  </MotionStaggerItem>
+                  </div>
                 ))}
-              </MotionStagger>
+              </div>
               <Pagination currentPage={currentPage} onPageChange={setPage} totalPages={totalPages} />
             </>
           ) : null}
