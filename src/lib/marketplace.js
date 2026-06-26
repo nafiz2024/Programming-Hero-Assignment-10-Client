@@ -215,6 +215,24 @@ export function normalizePromptItem(item, index = 0) {
       item?.summary ||
       item?.excerpt ||
       "High-quality prompt content preview from the PromptFlow marketplace.",
+    thumbnail:
+      item?.thumbnail ||
+      item?.image ||
+      item?.coverImage ||
+      item?.thumbnailUrl ||
+      "",
+    image:
+      item?.image ||
+      item?.thumbnail ||
+      item?.coverImage ||
+      item?.thumbnailUrl ||
+      "",
+    coverImage:
+      item?.coverImage ||
+      item?.thumbnail ||
+      item?.image ||
+      item?.thumbnailUrl ||
+      "",
     accent: accentPalette[index % accentPalette.length],
   };
 }

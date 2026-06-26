@@ -477,6 +477,9 @@ export default function PromptDetailsClient({ promptId }) {
             copyCount: Number(item?.copyCount || item?.copies || 0),
             author: item?.creatorName || item?.creator?.name || item?.author?.name || "PromptFlow Creator",
             description: item?.description || item?.summary || "Related prompt from the PromptFlow marketplace.",
+            thumbnail: item?.thumbnail || item?.image || item?.coverImage || "",
+            image: item?.image || item?.thumbnail || item?.coverImage || "",
+            coverImage: item?.coverImage || item?.thumbnail || item?.image || "",
           }));
         const relatedWithReviews = await enrichPromptsWithReviewSummaries(relatedBase);
         const related = relatedWithReviews
