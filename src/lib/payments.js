@@ -66,22 +66,13 @@ export function buildCheckoutReturnUrls(returnTo = "") {
     payment: "success",
     session_id: "{CHECKOUT_SESSION_ID}",
   });
-
-  if (safeReturnTo && safeReturnTo !== "/premium") {
-    successParams.set("returnTo", safeReturnTo);
-  }
-
   const cancelParams = new URLSearchParams({
     payment: "cancelled",
   });
 
-  if (safeReturnTo && safeReturnTo !== "/premium") {
-    cancelParams.set("returnTo", safeReturnTo);
-  }
-
   return {
     successUrl: buildClientUrl(`/premium?${successParams.toString()}`),
-    cancelUrl: buildClientUrl(`/payment?${cancelParams.toString()}`),
+    cancelUrl: buildClientUrl(`/premium?${cancelParams.toString()}`),
     returnTo: safeReturnTo,
   };
 }
