@@ -12,7 +12,12 @@ import ErrorState from "@/components/ui/ErrorState";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useAuth } from "@/hooks/useAuth";
 import { paymentApi } from "@/lib/api";
-import { isPremiumSubscription, normalizePayments, PREMIUM_PLAN } from "@/lib/payments";
+import {
+  getPremiumRedirectTarget,
+  isPremiumSubscription,
+  normalizePayments,
+  PREMIUM_PLAN,
+} from "@/lib/payments";
 
 function formatDate(value) {
   if (!value) {
@@ -71,8 +76,10 @@ function PremiumPageContent() {
     payments: [],
   });
   const isPremium = isPremiumSubscription(user?.subscription);
+  const returnTo = getPremiumRedirectTarget(searchParams.get("returnTo") || "");
   const paymentSuccess = searchParams.get("payment") === "success";
   const sessionId = searchParams.get("session_id") || "";
+  const checkoutHref = `/payment?returnTo=${encodeURIComponent(returnTo)}`;
   const [transactionId, setTransactionId] = useState("");
   const refreshUserAfterPayment = useEffectEvent(async () => {
     await refreshUser();
@@ -172,11 +179,24 @@ function PremiumPageContent() {
 
       {!isPremium ? (
         <MotionReveal preset="viewportReveal">
-          <ErrorState
-            description="This account does not have premium access yet. Upgrade to unlock private prompts and premium creator content."
-            onRetry={null}
-            title="Premium not active"
-          />
+          <section className="rounded-[28px] border border-primary/16 bg-[linear-gradient(135deg,rgba(99,102,241,0.08),rgba(14,165,233,0.06))] p-5 shadow-[0_18px_50px_rgba(99,102,241,0.08)]">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Upgrade to Premium</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Unlock this prompt and all premium prompts for $5, then continue back to what you were viewing.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button as={Link} href={checkoutHref} size="lg">
+                  Upgrade Now - $5
+                </Button>
+                <Button as={Link} href="/pricing" size="lg" variant="secondary">
+                  View Pricing
+                </Button>
+              </div>
+            </div>
+          </section>
         </MotionReveal>
       ) : null}
 
@@ -209,12 +229,25 @@ function PremiumPageContent() {
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
-                <Button as={Link} href="/pricing" variant="secondary">
-                  View Pricing
-                </Button>
-                <Button as={Link} href="/payment" variant="secondary">
-                  Checkout Again
-                </Button>
+                {isPremium ? (
+                  <>
+                    <Button as={Link} href="/pricing" variant="secondary">
+                      View Pricing
+                    </Button>
+                    <Button as={Link} href={checkoutHref} variant="secondary">
+                      Checkout Again
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button as={Link} href={checkoutHref}>
+                      Upgrade Now - $5
+                    </Button>
+                    <Button as={Link} href="/pricing" variant="secondary">
+                      View Pricing
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </section>
