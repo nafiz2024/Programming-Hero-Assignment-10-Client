@@ -51,6 +51,7 @@ import { recordPromptView } from "@/lib/notifications";
 import { isPremiumSubscription } from "@/lib/payments";
 import { getPromptId } from "@/lib/prompt-id";
 import {
+  buildLockedPromptDetailsFallback,
   normalizePromptDetails,
   normalizeReviewsPayload,
   premiumBenefits,
@@ -210,12 +211,33 @@ export default function PromptDetailsClient({ promptId }) {
     isBookmarkReady,
   } = usePromptBookmark(prompt, routePromptId);
   const isPremiumUser = isPremiumSubscription(user?.subscription);
-  const isPromptLocked = Boolean(prompt?.locked && !isPremiumUser);
-  const paymentHref = `/payment?returnTo=${encodeURIComponent(pathname || `/prompts/${resolvedPromptId || routePromptId}`)}`;
+  const isAdminUser = String(user?.role || "").toLowerCase() === "admin";
+  const isPromptOwner =
+    Boolean(user?.id) && Boolean(prompt?.creator?.id) && String(user.id) === String(prompt.creator.id);
+  const canAccessLockedPrompt =
+    isPremiumUser || isAdminUser || isPromptOwner || prompt?.visibility !== "Premium";
+  const isPromptLocked = Boolean(
+    (prompt?.locked || prompt?.lockedReason === "premium_required" || prompt?.visibility === "Premium") &&
+      !canAccessLockedPrompt,
+  );
+  const paymentHref = `/premium?returnTo=${encodeURIComponent(pathname || `/prompts/${resolvedPromptId || routePromptId}`)}`;
   const [feedbackPulse, setFeedbackPulse] = useState({
     copy: 0,
     bookmark: 0,
   });
+
+  function isPremiumLockedError(error) {
+    if (!error) {
+      return false;
+    }
+
+    return (
+      error.status === 403 &&
+      (error?.data?.lockedReason === "premium_required" ||
+        error?.data?.reason === "premium_required" ||
+        String(error?.message || "").toLowerCase().includes("premium"))
+    );
+  }
 
   function syncDashboardReviewsLocally(nextReviews) {
     const storedReviews = getStorageItem(getReviewsStorageKey(), []);
@@ -278,6 +300,15 @@ export default function PromptDetailsClient({ promptId }) {
         error: "",
       });
     } catch (error) {
+      if (isPremiumLockedError(error)) {
+        setPromptState({
+          status: "success",
+          item: buildLockedPromptDetailsFallback(routePromptId, error.data),
+          error: "",
+        });
+        return;
+      }
+
       setPromptState({
         status: "error",
         item: null,
@@ -368,11 +399,19 @@ export default function PromptDetailsClient({ promptId }) {
           error: "",
         });
       } else {
+        if (isPremiumLockedError(promptResult.reason)) {
+          setPromptState({
+            status: "success",
+            item: buildLockedPromptDetailsFallback(routePromptId, promptResult.reason?.data),
+            error: "",
+          });
+        } else {
         setPromptState({
           status: "error",
           item: null,
           error: promptResult.reason?.message || "Unable to load prompt details.",
         });
+        }
       }
 
       if (reviewResult.status === "fulfilled") {
@@ -888,10 +927,10 @@ export default function PromptDetailsClient({ promptId }) {
                         </div>
                         <h3 className="mt-4 text-h3">Premium prompt locked</h3>
                         <p className="mt-3 text-body-sm text-muted">
-                          Upgrade to reveal the full prompt content, copy access, and premium creator tools.
+                          This is a premium prompt. Upgrade for $5 to unlock this prompt and all premium prompts.
                         </p>
                         <Button as={Link} className="mt-5" href={paymentHref}>
-                          Unlock Premium
+                          Upgrade to Premium
                         </Button>
                       </div>
                     </div>
@@ -1126,7 +1165,7 @@ export default function PromptDetailsClient({ promptId }) {
                   <p className="text-body-xs font-semibold uppercase tracking-[0.2em] text-primary">Premium Access</p>
                   <h2 className="mt-3 text-h2">Unlock premium prompts</h2>
                   <p className="mt-3 text-body-sm text-muted">
-                    Get deeper prompt systems, faster workflows, and premium creator content as PromptFlow expands.
+                    Unlock this prompt and all premium prompts for $5 with one upgrade.
                   </p>
 
                   <div className="mt-5 space-y-3">
@@ -1146,7 +1185,7 @@ export default function PromptDetailsClient({ promptId }) {
                     href={paymentHref}
                     size="lg"
                   >
-                    Upgrade Now
+                    Upgrade to Premium
                   </Button>
                 </div>
               </aside>

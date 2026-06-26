@@ -130,6 +130,74 @@ function getPromptItem(payload) {
   return payload?.prompt || payload?.data || payload?.result || payload || {};
 }
 
+export function buildLockedPromptDetailsFallback(promptId, errorData = {}) {
+  const prompt = getPromptItem(errorData);
+  const creatorName =
+    prompt?.creator?.name ||
+    prompt?.creatorName ||
+    prompt?.author?.name ||
+    "PromptFlow Creator";
+  const creatorEmail =
+    prompt?.creator?.email ||
+    prompt?.creatorEmail ||
+    prompt?.author?.email ||
+    "";
+  const visibilityValue = String(prompt?.visibility || prompt?.access || "premium").toLowerCase();
+  const visibility =
+    visibilityValue.includes("premium") || visibilityValue.includes("private") ? "Premium" : "Public";
+
+  return {
+    id: String(prompt?._id || prompt?.id || promptId || ""),
+    _id: String(prompt?._id || prompt?.id || promptId || ""),
+    title: prompt?.title || "Premium Prompt",
+    description:
+      prompt?.description || "Upgrade to unlock the full prompt details and premium creator content.",
+    content: prompt?.content || "Upgrade to Premium to reveal the full prompt content.",
+    category: toTitleCase(prompt?.category?.name || prompt?.categoryName || prompt?.category || "General"),
+    aiTool: toTitleCase(prompt?.aiTool || prompt?.model || prompt?.tool || "ChatGPT"),
+    difficulty: normalizeDifficultyLabel(prompt?.difficulty || prompt?.level || "Beginner"),
+    visibility,
+    status: toTitleCase(prompt?.status || "Approved"),
+    rating: parseNumber(prompt?.rating || prompt?.averageRating || prompt?.score, 0),
+    reviewCount: parseNumber(prompt?.reviewCount || prompt?.totalReviews || prompt?.reviewsCount, 0),
+    copyCount: parseNumber(prompt?.copyCount || prompt?.copies || prompt?.downloads, 0),
+    publishedAt: prompt?.createdAt || prompt?.publishedAt || prompt?.date,
+    updatedAt: prompt?.updatedAt || prompt?.modifiedAt || prompt?.createdAt,
+    locked: true,
+    lockedReason: "premium_required",
+    requiresPremium: true,
+    thumbnail: prompt?.thumbnail || "",
+    tags: Array.isArray(prompt?.tags) ? prompt.tags.map(toTitleCase) : [],
+    creator: {
+      id: String(prompt?.creator?._id || prompt?.creatorId || ""),
+      name: creatorName,
+      email: creatorEmail,
+      image:
+        prompt?.creator?.image ||
+        prompt?.creator?.picture ||
+        prompt?.creator?.avatar ||
+        prompt?.creatorImage ||
+        prompt?.author?.image ||
+        "",
+      bio: buildCreatorBio(prompt),
+      initials: buildInitials(creatorName),
+      totalPrompts: parseNumber(
+        prompt?.creator?.totalPrompts || prompt?.creatorPromptCount || prompt?.author?.promptCount,
+        creatorStatFallbacks.totalPrompts,
+      ),
+      totalCopies: parseNumber(
+        prompt?.creator?.totalCopies || prompt?.creatorCopyCount || prompt?.author?.copyCount,
+        creatorStatFallbacks.totalCopies,
+      ),
+      averageRating: parseNumber(
+        prompt?.creator?.averageRating || prompt?.creatorRating || prompt?.author?.averageRating,
+        creatorStatFallbacks.averageRating,
+      ),
+    },
+    whyThisWorks: getPromptWhyWorks(prompt),
+  };
+}
+
 export function normalizePromptDetails(payload) {
   const prompt = getPromptItem(payload);
   const promptId = String(prompt?._id || prompt?.id || "");
@@ -144,7 +212,8 @@ export function normalizePromptDetails(payload) {
     prompt?.author?.email ||
     "";
   const visibilityValue = String(prompt?.visibility || prompt?.access || "public").toLowerCase();
-  const visibility = visibilityValue.includes("premium") ? "Premium" : "Public";
+  const visibility =
+    visibilityValue.includes("premium") || visibilityValue.includes("private") ? "Premium" : "Public";
   const difficulty = normalizeDifficultyLabel(prompt?.difficulty || prompt?.level || "Beginner");
   const category = toTitleCase(prompt?.category?.name || prompt?.categoryName || prompt?.category || "General");
   const aiTool = toTitleCase(prompt?.aiTool || prompt?.model || prompt?.tool || "ChatGPT");
@@ -183,6 +252,7 @@ export function normalizePromptDetails(payload) {
     publishedAt: prompt?.createdAt || prompt?.publishedAt || prompt?.date,
     updatedAt: prompt?.updatedAt || prompt?.modifiedAt || prompt?.createdAt,
     locked: Boolean(prompt?.isLocked || prompt?.requiresPremium),
+    lockedReason: String(prompt?.lockedReason || ""),
     requiresPremium: Boolean(prompt?.requiresPremium || visibility === "Premium"),
     thumbnail: prompt?.thumbnail || "",
     tags: Array.isArray(prompt?.tags) ? prompt.tags.map(toTitleCase) : [],
