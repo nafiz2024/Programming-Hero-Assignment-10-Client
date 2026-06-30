@@ -96,6 +96,26 @@ function extractAuthUserCandidate(payload) {
   );
 }
 
+export function extractAuthEmail(payload) {
+  if (!payload || typeof payload !== "object") {
+    return "";
+  }
+
+  const emailCandidates = [
+    payload.user?.email,
+    payload.data?.user?.email,
+    payload.session?.user?.email,
+    payload.data?.session?.user?.email,
+    payload.email,
+    payload.data?.email,
+    payload.user?.user?.email,
+  ];
+
+  const email = emailCandidates.find((candidate) => typeof candidate === "string" && candidate.trim());
+
+  return email ? email.trim() : "";
+}
+
 export function normalizeAuthUser(payload) {
   if (!payload) {
     return null;
@@ -109,8 +129,9 @@ export function normalizeAuthUser(payload) {
 
   return {
     ...candidate,
-    id: candidate.id || candidate._id || candidate.email || "",
+    id: candidate.id || candidate._id || candidate.email || extractAuthEmail(payload) || "",
     image: getUserImageSrc(candidate),
+    email: candidate.email || extractAuthEmail(payload) || "",
     picture: candidate.picture || candidate.image || "",
     photoURL: candidate.photoURL || candidate.picture || candidate.image || "",
     avatar: candidate.avatar || candidate.picture || candidate.image || "",

@@ -3,7 +3,7 @@
 import { createContext, startTransition, useCallback, useEffect, useRef, useState } from "react";
 
 import { authApi, userApi } from "@/lib/api";
-import { normalizeAuthUser } from "@/lib/auth";
+import { extractAuthEmail, normalizeAuthUser } from "@/lib/auth";
 
 export const AuthContext = createContext(undefined);
 
@@ -32,6 +32,28 @@ function buildFallbackAuthUser(userLike, fallbackEmail) {
   }
 
   return null;
+}
+
+function buildVerifiedAuthUser(payload, fallbackUser, fallbackEmail) {
+  const normalizedUser = normalizeAuthUser(payload);
+
+  if (normalizedUser) {
+    return normalizedUser;
+  }
+
+  const resolvedEmail = extractAuthEmail(payload) || fallbackEmail;
+
+  if (resolvedEmail) {
+    return buildFallbackAuthUser(
+      {
+        ...(fallbackUser && typeof fallbackUser === "object" ? fallbackUser : {}),
+        email: resolvedEmail,
+      },
+      resolvedEmail,
+    );
+  }
+
+  return buildFallbackAuthUser(fallbackUser, fallbackEmail);
 }
 
 export function AuthProvider({ children }) {
@@ -75,7 +97,7 @@ export function AuthProvider({ children }) {
       for (let attempt = 0; attempt < attempts; attempt += 1) {
         try {
           const { data, status } = await userApi.getMeWithMeta();
-          const currentUser = normalizeAuthUser(data);
+          const currentUser = buildVerifiedAuthUser(data, fallbackUser, fallbackEmail);
 
           if (currentUser) {
             setUser(currentUser);
