@@ -110,7 +110,7 @@ function normalizeStatus(value, index) {
     return "pending";
   }
 
-  return fallbackStatuses[index % fallbackStatuses.length];
+  return value ? fallbackStatuses[index % fallbackStatuses.length] : "pending";
 }
 
 function normalizeTags(value) {
@@ -166,30 +166,50 @@ export function isPromptOwnedByUser(item, user) {
   const userName = String(user.name || "").trim().toLowerCase();
   const candidateIds = [
     item?.userId,
+    item?.user?._id,
+    item?.user?.id,
+    item?.createdBy?._id,
+    item?.createdBy?.id,
     item?.ownerId,
+    item?.owner?._id,
+    item?.owner?.id,
     item?.creatorId,
     item?.authorId,
     item?.creator?._id,
     item?.creator?.id,
+    item?.creator?.user?._id,
+    item?.creator?.user?.id,
     item?.author?._id,
     item?.author?.id,
+    item?.author?.user?._id,
+    item?.author?.user?.id,
   ]
     .filter(Boolean)
     .map((value) => String(value).toLowerCase());
   const candidateEmails = [
+    item?.user?.email,
+    item?.createdBy?.email,
     item?.creatorEmail,
+    item?.owner?.email,
     item?.authorEmail,
     item?.email,
     item?.creator?.email,
+    item?.creator?.user?.email,
     item?.author?.email,
+    item?.author?.user?.email,
   ]
     .filter(Boolean)
     .map((value) => String(value).toLowerCase());
   const candidateNames = [
+    item?.user?.name,
+    item?.createdBy?.name,
     item?.creatorName,
+    item?.owner?.name,
     item?.authorName,
     item?.creator?.name,
+    item?.creator?.user?.name,
     item?.author?.name,
+    item?.author?.user?.name,
   ]
     .filter(Boolean)
     .map((value) => String(value).trim().toLowerCase());
@@ -261,7 +281,10 @@ export function normalizeCreatorPrompt(item, index = 0, user = null) {
 
 export function normalizeCreatorPrompts(payload, user) {
   const items = extractPromptItems(payload);
-  return items.filter((item) => isPromptOwnedByUser(item, user)).map((item, index) => normalizeCreatorPrompt(item, index, user));
+  return items
+    .filter((item) => isPromptOwnedByUser(item, user))
+    .map((item, index) => normalizeCreatorPrompt(item, index, user))
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
 }
 
 export function filterCreatorPrompts(prompts, filters) {

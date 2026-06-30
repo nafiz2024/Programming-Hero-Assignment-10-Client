@@ -19,7 +19,7 @@ import ErrorState from "@/components/ui/ErrorState";
 import Pagination from "@/components/ui/Pagination";
 import TableSkeleton from "@/components/ui/TableSkeleton";
 import UserAvatar from "@/components/ui/UserAvatar";
-import { promptApi } from "@/lib/api";
+import { adminApi, promptApi } from "@/lib/api";
 import {
   adminPromptStatuses,
   buildAdminPromptStatusCounts,
@@ -380,7 +380,7 @@ export default function AdminPrompts() {
     }));
 
     try {
-      const response = await promptApi.getAll();
+      const response = await adminApi.getPrompts();
       setState({
         status: "success",
         error: "",
@@ -567,6 +567,11 @@ export default function AdminPrompts() {
         </div>
 
         <section className="rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
+          {statusCounts.Pending > 0 ? (
+            <div className="border-b border-amber-200 bg-amber-50/80 px-5 py-4 text-sm text-amber-700">
+              {statusCounts.Pending} prompt{statusCounts.Pending === 1 ? "" : "s"} currently pending moderation.
+            </div>
+          ) : null}
           <div className="border-b border-slate-200 px-5 py-5">
             <div className="flex flex-wrap items-center gap-4">
               {adminPromptStatuses.map((status) => {

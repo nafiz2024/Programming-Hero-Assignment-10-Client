@@ -510,110 +510,112 @@ export function normalizeAdminPrompts(payload) {
     ? payload.result
     : [];
 
-  return items.map((item, index) => {
-    const title = item?.title || item?.name || `Prompt ${index + 1}`;
-    const creatorName =
-      item?.creator?.name ||
-      item?.creatorName ||
-      item?.author?.name ||
-      item?.authorName ||
-      `Creator ${index + 1}`;
-    const creatorEmail =
-      item?.creator?.email ||
-      item?.creatorEmail ||
-      item?.author?.email ||
-      item?.authorEmail ||
-      formatEmailFromName(creatorName);
-    const status = getPromptStatusLabel(item, index);
-    const visibility = getPromptVisibilityLabel(item?.visibility || item?.access || item?.plan);
-    const copyCount = parseNumber(item?.copyCount || item?.copies || item?.downloads, 64 + index * 17);
-    const bookmarkCount = parseNumber(
-      item?.bookmarkCount || item?.bookmarks || item?.savedCount,
-      Math.max(12, Math.round(copyCount * 0.42)),
-    );
-    const rating = parseNumber(item?.rating || item?.averageRating || item?.score, 4.2 + (index % 5) * 0.15);
-    const reviewCount = parseNumber(
-      item?.reviewCount || item?.reviewsCount || item?.reviews,
-      Math.max(8, Math.round(rating * 16)),
-    );
-    const category = toTitleCase(
-      item?.category?.name || item?.categoryName || item?.category || "AI Writing",
-    );
-    const aiTool = toTitleCase(item?.aiTool || item?.model || item?.tool || "ChatGPT");
-    const createdAt =
-      item?.createdAt ||
-      item?.submittedAt ||
-      item?.publishedAt ||
-      new Date(Date.now() - index * 86400000).toISOString();
-    const featured = Boolean(item?.featured || item?.isFeatured || status === "Featured");
+  return items
+    .map((item, index) => {
+      const title = item?.title || item?.name || `Prompt ${index + 1}`;
+      const creatorName =
+        item?.creator?.name ||
+        item?.creatorName ||
+        item?.author?.name ||
+        item?.authorName ||
+        `Creator ${index + 1}`;
+      const creatorEmail =
+        item?.creator?.email ||
+        item?.creatorEmail ||
+        item?.author?.email ||
+        item?.authorEmail ||
+        formatEmailFromName(creatorName);
+      const status = getPromptStatusLabel(item, index);
+      const visibility = getPromptVisibilityLabel(item?.visibility || item?.access || item?.plan);
+      const copyCount = parseNumber(item?.copyCount || item?.copies || item?.downloads, 64 + index * 17);
+      const bookmarkCount = parseNumber(
+        item?.bookmarkCount || item?.bookmarks || item?.savedCount,
+        Math.max(12, Math.round(copyCount * 0.42)),
+      );
+      const rating = parseNumber(item?.rating || item?.averageRating || item?.score, 4.2 + (index % 5) * 0.15);
+      const reviewCount = parseNumber(
+        item?.reviewCount || item?.reviewsCount || item?.reviews,
+        Math.max(8, Math.round(rating * 16)),
+      );
+      const category = toTitleCase(
+        item?.category?.name || item?.categoryName || item?.category || "AI Writing",
+      );
+      const aiTool = toTitleCase(item?.aiTool || item?.model || item?.tool || "ChatGPT");
+      const createdAt =
+        item?.createdAt ||
+        item?.submittedAt ||
+        item?.publishedAt ||
+        new Date(Date.now() - index * 86400000).toISOString();
+      const featured = Boolean(item?.featured || item?.isFeatured || status === "Featured");
 
-    return {
-      id: item?._id || item?.id || `prompt-${index}`,
-      title,
-      description:
-        item?.description ||
-        item?.summary ||
-        "High-quality marketplace prompt submitted for PromptFlow moderation.",
-      content:
-        item?.content ||
-        item?.promptContent ||
-        item?.prompt ||
-        item?.text ||
-        `You are a senior AI specialist.\n\nTask: ${title}\n\nRequirements:\n- Keep the output practical and structured.\n- Follow the selected AI tool style.\n- Return a polished final answer.`,
-      category,
-      aiTool,
-      visibility,
-      status,
-      featured,
-      copyCount,
-      bookmarkCount,
-      rating: Math.min(5, rating),
-      reviewCount,
-      creatorName,
-      creatorEmail,
-      creatorImage:
-        item?.creator?.image ||
-        item?.creator?.picture ||
-        item?.creator?.avatar ||
-        item?.author?.image ||
-        "",
-      creatorInitials: String(creatorName)
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join("")
-        .toUpperCase(),
-      creatorPromptCount: parseNumber(
-        item?.creator?.totalPrompts || item?.creatorPromptCount || item?.author?.promptCount,
-        18 + index * 3,
-      ),
-      creatorJoinedLabel: formatDateString(
-        item?.creator?.createdAt || item?.creatorJoinedAt || new Date(2024, 2, 15 + (index % 12)),
-      ),
-      createdAt,
-      createdLabel: new Intl.DateTimeFormat("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(new Date(createdAt)),
-      rejectionReason:
-        item?.rejectionReason ||
-        item?.feedback ||
-        item?.moderationNote ||
-        item?.adminNote ||
-        "",
-      thumbnail:
-        item?.thumbnail ||
-        item?.thumbnailUrl ||
-        item?.image ||
-        item?.coverImage ||
-        "",
-      source: item,
-    };
-  });
+      return {
+        id: item?._id || item?.id || `prompt-${index}`,
+        title,
+        description:
+          item?.description ||
+          item?.summary ||
+          "High-quality marketplace prompt submitted for PromptFlow moderation.",
+        content:
+          item?.content ||
+          item?.promptContent ||
+          item?.prompt ||
+          item?.text ||
+          `You are a senior AI specialist.\n\nTask: ${title}\n\nRequirements:\n- Keep the output practical and structured.\n- Follow the selected AI tool style.\n- Return a polished final answer.`,
+        category,
+        aiTool,
+        visibility,
+        status,
+        featured,
+        copyCount,
+        bookmarkCount,
+        rating: Math.min(5, rating),
+        reviewCount,
+        creatorName,
+        creatorEmail,
+        creatorImage:
+          item?.creator?.image ||
+          item?.creator?.picture ||
+          item?.creator?.avatar ||
+          item?.author?.image ||
+          "",
+        creatorInitials: String(creatorName)
+          .split(" ")
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0])
+          .join("")
+          .toUpperCase(),
+        creatorPromptCount: parseNumber(
+          item?.creator?.totalPrompts || item?.creatorPromptCount || item?.author?.promptCount,
+          18 + index * 3,
+        ),
+        creatorJoinedLabel: formatDateString(
+          item?.creator?.createdAt || item?.creatorJoinedAt || new Date(2024, 2, 15 + (index % 12)),
+        ),
+        createdAt,
+        createdLabel: new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(createdAt)),
+        rejectionReason:
+          item?.rejectionReason ||
+          item?.feedback ||
+          item?.moderationNote ||
+          item?.adminNote ||
+          "",
+        thumbnail:
+          item?.thumbnail ||
+          item?.thumbnailUrl ||
+          item?.image ||
+          item?.coverImage ||
+          "",
+        source: item,
+      };
+    })
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
 }
 
 export function filterAdminReports(reports, { query = "", status = adminReportStatuses[0] }) {

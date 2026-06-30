@@ -155,6 +155,7 @@ export default function DashboardMyPrompts() {
   const paginatedPrompts = filteredPrompts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const pageStart = filteredPrompts.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const pageEnd = filteredPrompts.length === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, filteredPrompts.length);
+  const pendingCount = ownedPrompts.filter((prompt) => prompt.statusValue === "pending").length;
 
   function openEdit(prompt) {
     setEditingPrompt(prompt);
@@ -267,6 +268,11 @@ export default function DashboardMyPrompts() {
             </div>
 
             <div className="mt-6">
+              {pendingCount > 0 ? (
+                <div className="mb-6 rounded-[20px] border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-700">
+                  {pendingCount} prompt{pendingCount === 1 ? "" : "s"} pending review. Pending submissions stay visible here until they are approved or rejected.
+                </div>
+              ) : null}
               {filteredPrompts.length === 0 ? (
                 <EmptyState
                   actionLabel="Create Prompt"

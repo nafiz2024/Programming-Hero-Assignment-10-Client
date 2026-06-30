@@ -265,6 +265,7 @@ export default function CreatorPrompts() {
   const paginatedPrompts = filteredPrompts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const activePrompt =
     filteredPrompts.find((prompt) => prompt.id === selectedPrompt?.id) || paginatedPrompts[0] || prompts[0] || null;
+  const pendingCount = prompts.filter((prompt) => prompt.statusValue === "pending").length;
 
   function openEdit(prompt) {
     setEditingPrompt(prompt);
@@ -393,6 +394,11 @@ export default function CreatorPrompts() {
               </div>
 
               <div className="mt-6">
+                {pendingCount > 0 ? (
+                  <div className="mb-6 rounded-[20px] border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-700">
+                    {pendingCount} prompt{pendingCount === 1 ? "" : "s"} pending review. Pending submissions stay visible here until moderation is complete.
+                  </div>
+                ) : null}
                 {filteredPrompts.length === 0 ? (
                   <EmptyState
                     actionLabel="Create Prompt"
