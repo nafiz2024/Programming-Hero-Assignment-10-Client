@@ -16,11 +16,7 @@ Create a local environment file from the example and use:
 NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
-For the live deployment, set:
-
-```env
-NEXT_PUBLIC_API_URL=https://programming-hero-assignment-10-serv-eta.vercel.app
-```
+For the live deployment, do not point the browser at the backend domain. Leave `NEXT_PUBLIC_API_URL` unset so the frontend uses its same-origin `/api` proxy.
 
 ## Available Scripts
 
@@ -52,4 +48,4 @@ src/
 
 - Auth and protected API requests use `credentials: include`.
 - Google OAuth depends on the backend cookie being set successfully before redirecting to Google.
-- The frontend must use the production backend URL in `NEXT_PUBLIC_API_URL` when deployed.
+- Production API requests go through the frontend domain via the `/api/:path*` rewrite proxy.
