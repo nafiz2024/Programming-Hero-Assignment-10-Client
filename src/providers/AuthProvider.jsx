@@ -3,6 +3,7 @@
 import { createContext, startTransition, useCallback, useEffect, useRef, useState } from "react";
 
 import { authApi, userApi } from "@/lib/api";
+import { normalizeAuthUser } from "@/lib/auth";
 
 export const AuthContext = createContext(undefined);
 
@@ -22,7 +23,7 @@ export function AuthProvider({ children }) {
     userRef.current = user;
   }, [user]);
 
-  const refreshUser = useCallback(async ({ preserveUser = false } = {}) => {
+  const refreshUser = useCallback(async ({ onError, preserveUser = false } = {}) => {
     const requestId = refreshRequestIdRef.current + 1;
     refreshRequestIdRef.current = requestId;
 
@@ -33,7 +34,9 @@ export function AuthProvider({ children }) {
       }
 
       return currentUser;
-    } catch {
+    } catch (error) {
+      onError?.(error);
+
       if (refreshRequestIdRef.current === requestId && !preserveUser) {
         setUser(null);
       }
@@ -43,9 +46,23 @@ export function AuthProvider({ children }) {
   }, []);
 
   const verifySession = useCallback(
-    async ({ attempts = 3, delayMs = 150 } = {}) => {
+    async ({ attempts = 3, delayMs = 200, initialDelayMs = 400 } = {}) => {
+      if (initialDelayMs > 0) {
+        await wait(initialDelayMs);
+      }
+
       for (let attempt = 0; attempt < attempts; attempt += 1) {
-        const currentUser = await refreshUser();
+        const currentUser = await refreshUser({
+          preserveUser: true,
+          onError: (error) => {
+            console.error("Session verification failed", {
+              attempt: attempt + 1,
+              message: error?.message || "Unknown session verification error.",
+              status: error?.status ?? null,
+              data: error?.data ?? null,
+            });
+          },
+        });
 
         if (currentUser) {
           return currentUser;
@@ -69,7 +86,13 @@ export function AuthProvider({ children }) {
     setLoading(true);
 
     try {
-      await authApi.signUp(payload);
+      const response = await authApi.signUp(payload);
+      const responseUser = normalizeAuthUser(response);
+
+      if (responseUser) {
+        setUser(responseUser);
+      }
+
       const verifiedUser = await verifySession();
 
       if (!verifiedUser) {
@@ -90,7 +113,13 @@ export function AuthProvider({ children }) {
     setLoading(true);
 
     try {
-      await authApi.signIn(payload);
+      const response = await authApi.signIn(payload);
+      const responseUser = normalizeAuthUser(response);
+
+      if (responseUser) {
+        setUser(responseUser);
+      }
+
       const verifiedUser = await verifySession();
 
       if (!verifiedUser) {

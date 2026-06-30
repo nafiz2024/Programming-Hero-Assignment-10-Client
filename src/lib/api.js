@@ -102,6 +102,7 @@ export const authApi = {
   signUp(payload) {
     return apiRequest("/api/auth/sign-up/email", {
       method: "POST",
+      credentials: "include",
       body: payload,
     });
   },
@@ -109,6 +110,7 @@ export const authApi = {
   signIn(payload) {
     return apiRequest("/api/auth/sign-in/email", {
       method: "POST",
+      credentials: "include",
       body: payload,
     });
   },
@@ -116,6 +118,7 @@ export const authApi = {
   signInSocial(payload) {
     return apiRequest("/api/auth/sign-in/social", {
       method: "POST",
+      credentials: "include",
       body: payload,
     });
   },
@@ -127,13 +130,13 @@ export const authApi = {
   },
 
   getSession() {
-    return apiRequest("/api/users/me");
+    return apiRequest("/api/users/me", { credentials: "include" });
   },
 };
 
 export const userApi = {
   getMe() {
-    return apiRequest("/api/users/me");
+    return apiRequest("/api/users/me", { credentials: "include" });
   },
 };
 
