@@ -66,18 +66,42 @@ export function normalizeRole(role) {
   return normalizedRole || "user";
 }
 
+function extractAuthUserCandidate(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const candidates = [
+    payload.user,
+    payload.data?.user,
+    payload.data?.data?.user,
+    payload.session?.user,
+    payload.data?.session?.user,
+    payload.data?.data?.session?.user,
+    payload.result?.user,
+    payload.result?.data?.user,
+    payload.result?.session?.user,
+    payload.data,
+    payload.result,
+    payload,
+  ];
+
+  return (
+    candidates.find(
+      (candidate) =>
+        candidate &&
+        typeof candidate === "object" &&
+        (candidate.email || candidate.user?.email || candidate.id || candidate._id),
+    ) || null
+  );
+}
+
 export function normalizeAuthUser(payload) {
   if (!payload) {
     return null;
   }
 
-  const candidate =
-    payload.user ||
-    payload.data?.user ||
-    payload.result?.user ||
-    payload.data ||
-    payload.result ||
-    payload;
+  const candidate = extractAuthUserCandidate(payload);
 
   if (!candidate || typeof candidate !== "object") {
     return null;
@@ -85,7 +109,7 @@ export function normalizeAuthUser(payload) {
 
   return {
     ...candidate,
-    id: candidate.id || candidate._id || "",
+    id: candidate.id || candidate._id || candidate.email || "",
     image: getUserImageSrc(candidate),
     picture: candidate.picture || candidate.image || "",
     photoURL: candidate.photoURL || candidate.picture || candidate.image || "",
