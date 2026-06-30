@@ -80,6 +80,24 @@ export async function apiRequest(endpoint, options = {}) {
   return data;
 }
 
+async function apiRequestFirstSuccessful(endpoints, options = {}) {
+  let lastError = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      return await apiRequest(endpoint, options);
+    } catch (error) {
+      lastError = error;
+
+      if (error?.status && error.status !== 404) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error("Request failed.");
+}
+
 export const authApi = {
   signUp(payload) {
     return apiRequest("/api/auth/sign-up/email", {
@@ -122,6 +140,15 @@ export const userApi = {
 export const promptApi = {
   getAll(queryString = "") {
     return apiRequest(`/api/prompts${queryString}`);
+  },
+
+  getMine(queryString = "") {
+    return apiRequestFirstSuccessful([
+      `/api/prompts/my-prompts${queryString}`,
+      `/api/users/me/prompts${queryString}`,
+      `/api/prompts/me${queryString}`,
+      `/api/prompts/mine${queryString}`,
+    ]);
   },
 
   getById(id) {

@@ -34,7 +34,7 @@ export function CreatorProvider({ children }) {
     }));
 
     try {
-      const response = await promptApi.getAll();
+      const response = await promptApi.getMine();
       const prompts = normalizeCreatorPrompts(response, user);
 
       setState({
@@ -78,6 +78,8 @@ export function CreatorProvider({ children }) {
       ...currentState,
       prompts: [normalized, ...currentState.prompts],
     }));
+
+    await refreshCreator();
 
     return normalized;
   }

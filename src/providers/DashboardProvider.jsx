@@ -47,10 +47,11 @@ export function DashboardProvider({ children }) {
     }));
 
     try {
-      const [userResponse, bookmarksResponse, promptsResponse] = await Promise.all([
+      const [userResponse, bookmarksResponse, promptsResponse, ownedPromptsResponse] = await Promise.all([
         userApi.getMe(),
         refreshBookmarks(),
         promptApi.getAll(),
+        promptApi.getMine(),
       ]);
 
       const profileOverrides = getStorageItem(getProfileStorageKey(), {});
@@ -60,7 +61,7 @@ export function DashboardProvider({ children }) {
           ? bookmarksResponse
           : normalizeBookmarks(bookmarksResponse, promptCatalog);
       const normalizedUser = normalizeDashboardUser(userResponse, profileOverrides);
-      const ownedPrompts = normalizeOwnedPrompts(promptsResponse, normalizedUser);
+      const ownedPrompts = normalizeOwnedPrompts(ownedPromptsResponse, normalizedUser);
       const localReviews = await fetchUserReviewsForPrompts(promptCatalog, normalizedUser);
 
       setState({
@@ -181,6 +182,8 @@ export function DashboardProvider({ children }) {
       ...currentState,
       ownedPrompts: [normalizedPrompt, ...currentState.ownedPrompts],
     }));
+
+    await refreshDashboard();
 
     return normalizedPrompt;
   }
