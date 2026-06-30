@@ -46,26 +46,41 @@ export function AuthProvider({ children }) {
   }, []);
 
   const verifySession = useCallback(
-    async ({ attempts = 3, delayMs = 200, initialDelayMs = 400 } = {}) => {
+    async ({ attempts = 3, delayMs = 200, initialDelayMs = 400, fallbackUser = null } = {}) => {
       if (initialDelayMs > 0) {
         await wait(initialDelayMs);
       }
 
       for (let attempt = 0; attempt < attempts; attempt += 1) {
-        const currentUser = await refreshUser({
-          preserveUser: true,
-          onError: (error) => {
-            console.error("Session verification failed", {
-              attempt: attempt + 1,
-              message: error?.message || "Unknown session verification error.",
-              status: error?.status ?? null,
-              data: error?.data ?? null,
-            });
-          },
-        });
+        try {
+          const { data, status } = await userApi.getMeWithMeta();
+          const currentUser = normalizeAuthUser(data);
 
-        if (currentUser) {
-          return currentUser;
+          if (currentUser) {
+            setUser(currentUser);
+            return currentUser;
+          }
+
+          if (status === 200 && fallbackUser) {
+            setUser(fallbackUser);
+            return fallbackUser;
+          }
+        } catch (error) {
+          console.error("Session verification failed", {
+            attempt: attempt + 1,
+            message: error?.message || "Unknown session verification error.",
+            status: error?.status ?? null,
+            data: error?.data ?? null,
+          });
+
+          const currentUser = await refreshUser({
+            preserveUser: true,
+            onError: () => {},
+          });
+
+          if (currentUser) {
+            return currentUser;
+          }
         }
 
         if (attempt < attempts - 1) {
@@ -93,7 +108,7 @@ export function AuthProvider({ children }) {
         setUser(responseUser);
       }
 
-      const verifiedUser = await verifySession();
+      const verifiedUser = await verifySession({ fallbackUser: responseUser });
 
       if (!verifiedUser) {
         throw new Error("Registration completed, but your session could not be verified. Please sign in again.");
@@ -120,7 +135,7 @@ export function AuthProvider({ children }) {
         setUser(responseUser);
       }
 
-      const verifiedUser = await verifySession();
+      const verifiedUser = await verifySession({ fallbackUser: responseUser });
 
       if (!verifiedUser) {
         throw new Error("Login completed, but your session cookie could not be verified. Please try again.");

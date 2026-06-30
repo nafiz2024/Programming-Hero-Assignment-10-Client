@@ -46,9 +46,13 @@ function buildHeaders(headers = {}, body) {
   return nextHeaders;
 }
 
+function buildRequestUrl(endpoint) {
+  return `${getApiBaseUrl()}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+}
+
 export async function apiRequest(endpoint, options = {}) {
   const { headers, body, ...restOptions } = options;
-  const url = `${getApiBaseUrl()}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+  const url = buildRequestUrl(endpoint);
   const requestHeaders = buildHeaders(headers, body);
   const requestBody =
     body && !(body instanceof FormData) && typeof body !== "string"
@@ -78,6 +82,43 @@ export async function apiRequest(endpoint, options = {}) {
   }
 
   return data;
+}
+
+export async function apiRequestWithMeta(endpoint, options = {}) {
+  const { headers, body, ...restOptions } = options;
+  const url = buildRequestUrl(endpoint);
+  const requestHeaders = buildHeaders(headers, body);
+  const requestBody =
+    body && !(body instanceof FormData) && typeof body !== "string"
+      ? JSON.stringify(body)
+      : body;
+
+  const response = await fetch(url, {
+    ...restOptions,
+    headers: requestHeaders,
+    body: requestBody,
+    credentials: "include",
+  });
+
+  const data = await parseResponseBody(response);
+
+  if (!response.ok) {
+    const message =
+      data?.message ||
+      data?.error ||
+      data?.details ||
+      `Request failed with status ${response.status}`;
+
+    const error = new Error(message);
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+
+  return {
+    data,
+    status: response.status,
+  };
 }
 
 async function apiRequestFirstSuccessful(endpoints, options = {}) {
@@ -137,6 +178,10 @@ export const authApi = {
 export const userApi = {
   getMe() {
     return apiRequest("/api/users/me", { credentials: "include" });
+  },
+
+  getMeWithMeta() {
+    return apiRequestWithMeta("/api/users/me", { credentials: "include" });
   },
 };
 
