@@ -3,9 +3,14 @@
 import { createContext, startTransition, useCallback, useEffect, useRef, useState } from "react";
 
 import { authApi, userApi } from "@/lib/api";
-import { normalizeAuthUser } from "@/lib/auth";
 
 export const AuthContext = createContext(undefined);
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -37,6 +42,25 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const verifySession = useCallback(
+    async ({ attempts = 3, delayMs = 150 } = {}) => {
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const currentUser = await refreshUser();
+
+        if (currentUser) {
+          return currentUser;
+        }
+
+        if (attempt < attempts - 1) {
+          await wait(delayMs);
+        }
+      }
+
+      return null;
+    },
+    [refreshUser],
+  );
+
   async function signUp(nameOrPayload, email, password, extras = {}) {
     const payload =
       typeof nameOrPayload === "object"
@@ -45,14 +69,14 @@ export function AuthProvider({ children }) {
     setLoading(true);
 
     try {
-      const response = await authApi.signUp(payload);
-      const responseUser = normalizeAuthUser(response);
+      await authApi.signUp(payload);
+      const verifiedUser = await verifySession();
 
-      if (responseUser) {
-        setUser(responseUser);
+      if (!verifiedUser) {
+        throw new Error("Registration completed, but your session could not be verified. Please sign in again.");
       }
 
-      return (await refreshUser({ preserveUser: Boolean(responseUser) })) || responseUser;
+      return verifiedUser;
     } finally {
       setLoading(false);
     }
@@ -66,14 +90,14 @@ export function AuthProvider({ children }) {
     setLoading(true);
 
     try {
-      const response = await authApi.signIn(payload);
-      const responseUser = normalizeAuthUser(response);
+      await authApi.signIn(payload);
+      const verifiedUser = await verifySession();
 
-      if (responseUser) {
-        setUser(responseUser);
+      if (!verifiedUser) {
+        throw new Error("Login completed, but your session cookie could not be verified. Please try again.");
       }
 
-      return (await refreshUser({ preserveUser: Boolean(responseUser) })) || responseUser;
+      return verifiedUser;
     } finally {
       setLoading(false);
     }
