@@ -19,6 +19,7 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import ErrorState from "@/components/ui/ErrorState";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { adminApi } from "@/lib/api";
 import { formatCompactNumber } from "@/lib/marketplace";
 import {
@@ -115,6 +116,7 @@ const quickModerationCards = [
 ];
 
 export default function AdminDashboard() {
+  const { authLoading, canLoadAdminData, isAdmin } = useAdminAccess();
   const [state, setState] = useState({
     status: "loading",
     error: "",
@@ -157,6 +159,10 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
+    if (!canLoadAdminData) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       loadAdminDashboard();
     }, 0);
@@ -164,7 +170,7 @@ export default function AdminDashboard() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [canLoadAdminData]);
 
   const statCards = useMemo(() => {
     if (!state.stats) {
@@ -184,6 +190,14 @@ export default function AdminDashboard() {
   const recentReports = state.reports.slice(0, 5);
   const paymentActivities = state.activity.filter((item) => item.type.includes("payment")).slice(0, 5);
   const pendingPromptItems = recentReports.slice(0, 5);
+
+  if (authLoading) {
+    return <LoadingSpinner className="min-h-[50vh]" label="Checking admin access" />;
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
 
   if (state.status === "loading") {
     return <LoadingSpinner className="min-h-[50vh]" label="Loading admin dashboard" />;

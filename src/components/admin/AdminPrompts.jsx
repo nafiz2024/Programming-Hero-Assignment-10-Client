@@ -19,6 +19,7 @@ import ErrorState from "@/components/ui/ErrorState";
 import Pagination from "@/components/ui/Pagination";
 import TableSkeleton from "@/components/ui/TableSkeleton";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { adminApi, promptApi } from "@/lib/api";
 import {
   adminPromptStatuses,
@@ -347,6 +348,7 @@ function DeleteModal({ isSubmitting, onClose, onSubmit, prompt }) {
 }
 
 export default function AdminPrompts() {
+  const { authLoading, canLoadAdminData, isAdmin } = useAdminAccess();
   const [state, setState] = useState({
     status: "loading",
     error: "",
@@ -396,6 +398,10 @@ export default function AdminPrompts() {
   }
 
   useEffect(() => {
+    if (!canLoadAdminData) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       loadPrompts();
     }, 0);
@@ -403,7 +409,7 @@ export default function AdminPrompts() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [canLoadAdminData]);
 
   const categoryOptions = useMemo(
     () => ["All Categories", ...new Set(state.prompts.map((prompt) => prompt.category))],
@@ -538,6 +544,14 @@ export default function AdminPrompts() {
     setActiveMenuId("");
     setRejectionTarget(prompt);
     setRejectionFeedback(prompt.rejectionReason || "");
+  }
+
+  if (authLoading) {
+    return <TableSkeleton columns={7} rows={8} />;
+  }
+
+  if (!isAdmin) {
+    return null;
   }
 
   if (state.status === "loading") {

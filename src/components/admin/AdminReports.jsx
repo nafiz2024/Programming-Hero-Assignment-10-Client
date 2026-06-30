@@ -10,6 +10,7 @@ import ErrorState from "@/components/ui/ErrorState";
 import Pagination from "@/components/ui/Pagination";
 import TableSkeleton from "@/components/ui/TableSkeleton";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { adminApi } from "@/lib/api";
 import {
   adminReportStatuses,
@@ -85,6 +86,7 @@ function ReportActionMenu({ isOpen, onClose, onDismiss, onRemove, onWarn, prompt
 }
 
 export default function AdminReports() {
+  const { authLoading, canLoadAdminData, isAdmin } = useAdminAccess();
   const [state, setState] = useState({
     status: "loading",
     error: "",
@@ -137,6 +139,10 @@ export default function AdminReports() {
   }
 
   useEffect(() => {
+    if (!canLoadAdminData) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       loadReports();
     }, 0);
@@ -144,7 +150,7 @@ export default function AdminReports() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [canLoadAdminData]);
 
   const filteredReports = useMemo(
     () => filterAdminReports(state.reports, { query, status: statusFilter }),
@@ -225,6 +231,14 @@ export default function AdminReports() {
       message: report.warningMessage.replace("{{creator_name}}", report.creatorName),
     });
     setActiveMenuId("");
+  }
+
+  if (authLoading) {
+    return <TableSkeleton columns={8} rows={8} />;
+  }
+
+  if (!isAdmin) {
+    return null;
   }
 
   if (state.status === "loading") {

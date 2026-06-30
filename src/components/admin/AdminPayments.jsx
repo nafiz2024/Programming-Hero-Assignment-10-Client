@@ -5,6 +5,7 @@ import { CreditCard, DollarSign, Receipt, Wallet } from "lucide-react";
 
 import ErrorState from "@/components/ui/ErrorState";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { adminApi } from "@/lib/api";
 import { formatCompactNumber } from "@/lib/marketplace";
 import { normalizePayments } from "@/lib/payments";
@@ -104,6 +105,7 @@ function PaymentRow({ payment }) {
 }
 
 export default function AdminPayments() {
+  const { authLoading, canLoadAdminData, isAdmin } = useAdminAccess();
   const [state, setState] = useState({
     status: "loading",
     error: "",
@@ -138,6 +140,10 @@ export default function AdminPayments() {
   }
 
   useEffect(() => {
+    if (!canLoadAdminData) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       loadPayments();
     }, 0);
@@ -145,7 +151,7 @@ export default function AdminPayments() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [canLoadAdminData]);
 
   const summary = useMemo(() => {
     const successfulPayments = state.payments.filter((payment) => isSuccessfulStatus(payment.statusValue));
@@ -160,6 +166,14 @@ export default function AdminPayments() {
       premiumPayments,
     };
   }, [state.payments]);
+
+  if (authLoading) {
+    return <LoadingSpinner className="min-h-[50vh]" label="Checking admin access" />;
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
 
   if (state.status === "loading") {
     return <LoadingSpinner className="min-h-[50vh]" label="Loading admin payments" />;

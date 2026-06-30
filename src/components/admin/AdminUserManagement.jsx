@@ -21,6 +21,7 @@ import ErrorState from "@/components/ui/ErrorState";
 import Pagination from "@/components/ui/Pagination";
 import TableSkeleton from "@/components/ui/TableSkeleton";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { adminApi } from "@/lib/api";
 import {
   adminSubscriptions,
@@ -360,6 +361,7 @@ function DeleteModal({ isSubmitting, onClose, onSubmit, user }) {
 }
 
 export default function AdminUserManagement({ mode = "users" }) {
+  const { authLoading, canLoadAdminData, isAdmin } = useAdminAccess();
   const isCreatorMode = mode === "creators";
   const [state, setState] = useState({
     status: "loading",
@@ -409,6 +411,10 @@ export default function AdminUserManagement({ mode = "users" }) {
   }
 
   useEffect(() => {
+    if (!canLoadAdminData) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       loadUsers();
     }, 0);
@@ -416,7 +422,7 @@ export default function AdminUserManagement({ mode = "users" }) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [canLoadAdminData]);
 
   const scopedUsers = useMemo(() => {
     if (!isCreatorMode) {
@@ -560,6 +566,14 @@ export default function AdminUserManagement({ mode = "users" }) {
   function openPreview(user) {
     setActiveMenuId("");
     setPreviewUser(user);
+  }
+
+  if (authLoading) {
+    return <TableSkeleton columns={isCreatorMode ? 9 : 8} rows={8} />;
+  }
+
+  if (!isAdmin) {
+    return null;
   }
 
   if (state.status === "loading") {

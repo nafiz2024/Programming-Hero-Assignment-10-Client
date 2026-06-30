@@ -18,6 +18,7 @@ import {
 import ErrorState from "@/components/ui/ErrorState";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { adminApi } from "@/lib/api";
 import { normalizeAdminReports, normalizeAdminStats } from "@/lib/admin";
 import { formatCompactNumber } from "@/lib/marketplace";
@@ -545,6 +546,7 @@ function AlertRow({ item }) {
 }
 
 export default function AdminAnalytics() {
+  const { authLoading, canLoadAdminData, isAdmin } = useAdminAccess();
   const [state, setState] = useState({
     status: "loading",
     error: "",
@@ -616,6 +618,10 @@ export default function AdminAnalytics() {
   }
 
   useEffect(() => {
+    if (!canLoadAdminData) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       loadAnalytics();
     }, 0);
@@ -623,7 +629,7 @@ export default function AdminAnalytics() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [canLoadAdminData]);
 
   const rangeLabel = useMemo(() => buildRangeLabel(), []);
 
@@ -685,6 +691,14 @@ export default function AdminAnalytics() {
       },
     ];
   }, [state.analytics, state.stats]);
+
+  if (authLoading) {
+    return <LoadingSpinner className="min-h-[50vh]" label="Checking admin access" />;
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
 
   if (state.status === "loading") {
     return <LoadingSpinner className="min-h-[50vh]" label="Loading analytics overview" />;

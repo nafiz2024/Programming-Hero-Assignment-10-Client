@@ -293,32 +293,33 @@ export const reportApi = {
 
 export const adminApi = {
   getStats() {
-    return apiRequest("/api/admin/stats");
+    return apiRequest("/api/admin/stats", { credentials: "include" });
   },
 
   getPayments() {
-    return apiRequest("/api/admin/payments");
+    return apiRequest("/api/admin/payments", { credentials: "include" });
   },
 
   getRevenue() {
-    return apiRequest("/api/admin/revenue");
+    return apiRequest("/api/admin/revenue", { credentials: "include" });
   },
 
   getRecentActivity() {
-    return apiRequest("/api/admin/recent-activity");
+    return apiRequest("/api/admin/recent-activity", { credentials: "include" });
   },
 
   getUsers(queryString = "") {
-    return apiRequest(`/api/users${queryString}`);
+    return apiRequest(`/api/users${queryString}`, { credentials: "include" });
   },
 
   getPrompts(queryString = "") {
-    return apiRequest(`/api/prompts/admin/all${queryString}`);
+    return apiRequest(`/api/prompts/admin/all${queryString}`, { credentials: "include" });
   },
 
   updateUserRole(id, payload) {
     return apiRequest(`/api/users/${id}/role`, {
       method: "PATCH",
+      credentials: "include",
       body: payload,
     });
   },
@@ -326,16 +327,18 @@ export const adminApi = {
   deleteUser(id) {
     return apiRequest(`/api/users/${id}`, {
       method: "DELETE",
+      credentials: "include",
     });
   },
 
   getReports(queryString = "") {
-    return apiRequest(`/api/reports${queryString}`);
+    return apiRequest(`/api/reports${queryString}`, { credentials: "include" });
   },
 
   warnCreator(id, payload = {}) {
     return apiRequest(`/api/reports/${id}/warn-creator`, {
       method: "PATCH",
+      credentials: "include",
       body: payload,
     });
   },
@@ -343,6 +346,7 @@ export const adminApi = {
   removePrompt(id, payload = {}) {
     return apiRequest(`/api/reports/${id}/remove-prompt`, {
       method: "PATCH",
+      credentials: "include",
       body: payload,
     });
   },
@@ -350,6 +354,7 @@ export const adminApi = {
   dismissReport(id, payload = {}) {
     return apiRequest(`/api/reports/${id}/dismiss`, {
       method: "PATCH",
+      credentials: "include",
       body: payload,
     });
   },
