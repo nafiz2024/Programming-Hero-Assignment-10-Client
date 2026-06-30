@@ -13,6 +13,27 @@ function wait(ms) {
   });
 }
 
+function buildFallbackAuthUser(userLike, fallbackEmail) {
+  const normalizedUser = normalizeAuthUser(userLike);
+
+  if (normalizedUser) {
+    return normalizedUser;
+  }
+
+  if (typeof fallbackEmail === "string" && fallbackEmail.trim()) {
+    const email = fallbackEmail.trim();
+
+    return {
+      id: email,
+      email,
+      role: "user",
+      subscription: "free",
+    };
+  }
+
+  return null;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +67,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const verifySession = useCallback(
-    async ({ attempts = 3, delayMs = 200, initialDelayMs = 400, fallbackUser = null } = {}) => {
+    async ({ attempts = 3, delayMs = 200, initialDelayMs = 400, fallbackUser = null, fallbackEmail = "" } = {}) => {
       if (initialDelayMs > 0) {
         await wait(initialDelayMs);
       }
@@ -61,9 +82,13 @@ export function AuthProvider({ children }) {
             return currentUser;
           }
 
-          if (status === 200 && fallbackUser) {
-            setUser(fallbackUser);
-            return fallbackUser;
+          if (status === 200) {
+            const nextUser = buildFallbackAuthUser(fallbackUser, fallbackEmail);
+
+            if (nextUser) {
+              setUser(nextUser);
+              return nextUser;
+            }
           }
         } catch (error) {
           console.error("Session verification failed", {
@@ -103,12 +128,16 @@ export function AuthProvider({ children }) {
     try {
       const response = await authApi.signUp(payload);
       const responseUser = normalizeAuthUser(response);
+      const fallbackEmail =
+        payload?.email ||
+        responseUser?.email ||
+        "";
 
       if (responseUser) {
         setUser(responseUser);
       }
 
-      const verifiedUser = await verifySession({ fallbackUser: responseUser });
+      const verifiedUser = await verifySession({ fallbackUser: responseUser, fallbackEmail });
 
       if (!verifiedUser) {
         throw new Error("Registration completed, but your session could not be verified. Please sign in again.");
@@ -130,12 +159,16 @@ export function AuthProvider({ children }) {
     try {
       const response = await authApi.signIn(payload);
       const responseUser = normalizeAuthUser(response);
+      const fallbackEmail =
+        payload?.email ||
+        responseUser?.email ||
+        "";
 
       if (responseUser) {
         setUser(responseUser);
       }
 
-      const verifiedUser = await verifySession({ fallbackUser: responseUser });
+      const verifiedUser = await verifySession({ fallbackUser: responseUser, fallbackEmail });
 
       if (!verifiedUser) {
         throw new Error("Login completed, but your session cookie could not be verified. Please try again.");
